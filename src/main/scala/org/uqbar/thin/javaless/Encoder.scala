@@ -9,12 +9,15 @@ object Encoder extends Encoder {
 }
 
 trait Encoder {
+	protected val terminals: Map[Symbol, String] = DefaultTerminals
+
 	implicit protected def StringToEncoderResult(s: String) = Success(s)
+	implicit protected def SymbolToEncoderResult(s: Symbol) = StringToEncoderResult(terminals(s))
 
 	protected def encode(element: SyntaxElement): EncoderResult = {
 		val content: EncoderResult = element match {
 			case Program(definitions) => (EncoderResult.base /: definitions){ _ ~ encode(_) }
-			case Class(Identifier(name), body) => s"class $name { }"
+			case Class(Identifier(name), body) => 'class ~ " " ~ name ~ " " ~ 'contextOpen ~ " " ~ 'contextClose
 		}
 
 		content.updated(element, 0 until content.text.size)

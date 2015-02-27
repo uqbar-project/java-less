@@ -1,6 +1,7 @@
 package org.uqbar.thin.javaless
 
 import scala.language.implicitConversions
+import scala.collection.JavaConversions._
 import org.scalatest.FreeSpec
 import org.scalatest.Matchers
 import org.scalatest.matchers.MatchResult
@@ -33,17 +34,15 @@ abstract class EncoderTest extends FreeSpec with Matchers with Encoder {
 	case class beEncodedTo(expectedText: String, expectedReferences: (SyntaxElement, Range)*) extends Matcher[SyntaxElement] {
 		def apply(target: SyntaxElement) = {
 			val result = encode(target)
-			val adjustedExpectedReferences = new IdentityHashMap[SyntaxElement, Range]
-			for ((key, value) <- expectedReferences) adjustedExpectedReferences.put(key, value)
 			val success = result match {
-				case Success(`expectedText`, `adjustedExpectedReferences`) => true
+				case Success(`expectedText`, references) => references.size == expectedReferences.size && expectedReferences.forall{ case (key, value) => references.get(key) == value }
 				case _ => false
 			}
 
 			MatchResult(
 				success,
-				s"Encoded $result did not match ${Success(expectedText, adjustedExpectedReferences)}",
-				s"Encoded $result matched ${Success(expectedText, adjustedExpectedReferences)}"
+				s"Encoded $result did not match Success($expectedText, $expectedReferences)}",
+				s"Encoded $result matched Success($expectedText, $expectedReferences)}"
 			)
 		}
 	}

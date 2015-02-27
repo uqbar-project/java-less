@@ -6,6 +6,12 @@ import java.util.IdentityHashMap
 
 package object javaless {
 
+	val DefaultTerminals = Map(
+		'class -> "class",
+		'contextOpen -> "{",
+		'contextClose -> "}"
+	)
+
 	implicit def StringToIdentifier(s: String) = Identifier(s)
 
 	implicit class ExtendedIdentityHashMap(inner: IdentityHashMap[SyntaxElement, Range]) {

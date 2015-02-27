@@ -2,8 +2,9 @@ package org.uqbar.thin.javaless
 
 case class Identifier(value: String)
 
-case class Class(name: Identifier, body: List[ClassMember])
+sealed trait SyntaxElement
 
+case class Program(definitions: List[Class]) extends SyntaxElement
+
+case class Class(name: Identifier, body: List[ClassMember]) extends SyntaxElement
 sealed trait ClassMember
-case class Field(name: Identifier, typeSignature: String) extends ClassMember
-case class Method(name: Identifier, typeSignature: String) extends ClassMember

@@ -9,7 +9,7 @@ import org.scalatest.matchers.Matcher
 import java.util.IdentityHashMap
 
 class JavalessEncoderTest extends EncoderTest {
-
+ 
 	"Javaless encode of" - {
 
 		"classes" - {
@@ -33,7 +33,7 @@ abstract class EncoderTest extends FreeSpec with Matchers with Encoder {
 
 	case class beEncodedTo(expectedText: String, expectedReferences: (SyntaxElement, Range)*) extends Matcher[SyntaxElement] {
 		def apply(target: SyntaxElement) = {
-			val result = encode(target)
+			val result = encode(target) 
 			val success = result match {
 				case Success(`expectedText`, references) => references.size == expectedReferences.size && expectedReferences.forall{ case (key, value) => references.get(key) == value }
 				case _ => false

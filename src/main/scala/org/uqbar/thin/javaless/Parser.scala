@@ -3,17 +3,15 @@ package org.uqbar.thin.javaless
 import scala.language.implicitConversions
 import scala.util.parsing.combinator.JavaTokenParsers
 
-object Parser extends Parser {
-	def apply(input: String) = parseAll(program, input)
-}
+class Parser(terminals: => Map[Symbol, String] = DefaultTerminals){
+	
+	def apply(input:String) = Definition.parseAll(Definition.program,input)
 
-trait Parser extends JavaTokenParsers {
-	protected val terminals: Map[Symbol, String] = DefaultTerminals
+	object Definition extends JavaTokenParsers {
+		protected implicit def SymbolToParser(s: Symbol): Parser[String] = terminals(s)
 
-	implicit def SymbolToParser(s: Symbol): Parser[String] = terminals(s)
-
-	protected def identifier = ident ^^ Identifier
-
-	protected def program = classDef.* ^^ Program
-	protected def classDef = 'class ~> identifier <~ 'contextOpen ~ 'contextClose ^^ { case name => Class(name, Nil) }
+		lazy val identifier = ident ^^ Identifier
+		lazy val program = classDefinition.* ^^ Program
+		lazy val classDefinition = 'class ~> identifier <~ 'contextOpen ~ 'contextClose ^^ { case name => Class(name, Nil) }
+	}
 }

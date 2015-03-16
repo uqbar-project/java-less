@@ -1,7 +1,5 @@
 package org.uqbar.thin.javaless
 
-case class Identifier(value: String)
-
 sealed trait SyntaxElement
 
 case class Program(definitions: List[Class]) extends SyntaxElement

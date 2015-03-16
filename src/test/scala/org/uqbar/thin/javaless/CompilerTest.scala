@@ -29,12 +29,12 @@ class JavalessCompilerTest extends FreeSpec with Matchers  with BeforeAndAfterAl
 			"should succeed" - {
 				"for an empty class" in {
 					val target = Class("MyClass", Nil)
-					val targetFile = s"$TEMP_PATH${File.separator}${target.name.value}.class"
+					val targetFile = s"$TEMP_PATH${File.separator}${target.name}.class"
 					val classLoader = new BytecodeClassLoader
 					compile(Program(List(target)), targetFile)
 					val importedClass = classLoader.importClass(targetFile)
 					
-					importedClass.getName should be(target.name.value)
+					importedClass.getName should be(target.name)
 				}
 			}
 		}

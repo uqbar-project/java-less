@@ -1,16 +1,17 @@
 package org.uqbar.thin.javaless
 
 import org.scalatest.FreeSpec
+import org.uqbar.testing.ParserTest
 
-class JavalessParserTest extends FreeSpec with ParserTest {
+class JavalessParserTest extends FreeSpec with ParserTest[ParserDefinition] with ParserDefinition {
 	
-	val parserDefinition = new Parser().Definition
+	val terminals = DefaultTerminals
 	
-	"Javaless parse of" - {
+	"Javaless parse of" - { 
 		
 		"classes" - { 
 			
-			implicit val parser = parserDefinition.classDefinition
+			implicit val parser = classDefinition
 
 			"should succeed" - {
 				"for an empty class" in {

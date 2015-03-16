@@ -17,7 +17,7 @@ trait Encoder {
 	protected def encode(element: SyntaxElement): EncoderResult = {
 		val content: EncoderResult = element match {
 			case Program(definitions) => (EncoderResult.base /: definitions){ _ ~ encode(_) }
-			case Class(Identifier(name), body) => 'class ~ " " ~ name ~ " " ~ 'contextOpen ~ " " ~ 'contextClose
+			case Class(name, body) => 'class ~ " " ~ name ~ " " ~ 'contextOpen ~ " " ~ 'contextClose
 		}
 
 		content.updated(element, 0 until content.text.size)

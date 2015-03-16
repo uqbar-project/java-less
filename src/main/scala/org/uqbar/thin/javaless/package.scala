@@ -12,8 +12,8 @@ package object javaless {
 		'contextClose -> "}"
 	)
 
-	implicit def StringToIdentifier(s: String) = Identifier(s)
-
+	type Identifier = String
+	
 	implicit class ExtendedIdentityHashMap(inner: IdentityHashMap[SyntaxElement, Range]) {
 		def ++(other: IdentityHashMap[SyntaxElement, Range]) = {
 			val next = new IdentityHashMap[SyntaxElement, Range]

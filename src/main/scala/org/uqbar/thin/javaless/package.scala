@@ -9,7 +9,9 @@ package object javaless {
 	val DefaultTerminals = Map(
 		'class -> "class",
 		'contextOpen -> "{",
-		'contextClose -> "}"
+		'contextClose -> "}",
+    'argumentOpen -> "(",
+    'argumentClose -> ")"
 	)
 
 	type Identifier = String

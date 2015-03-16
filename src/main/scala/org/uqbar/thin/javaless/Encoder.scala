@@ -15,10 +15,12 @@ trait Encoder {
 	implicit protected def SymbolToEncoderResult(s: Symbol) = StringToEncoderResult(terminals(s))
 
 	protected def encode(element: SyntaxElement): EncoderResult = {
-		val content: EncoderResult = element match {
-			case Program(definitions) => (EncoderResult.base /: definitions){ _ ~ encode(_) }
-			case Class(name, body) => 'class ~ " " ~ name ~ " " ~ 'contextOpen ~ " " ~ 'contextClose
-		}
+    val content: EncoderResult = element match {
+      case Program(definitions) => (EncoderResult.base /: definitions){ _ ~ encode(_) }
+      case Class(name, body) => 'class ~ " " ~ name ~ " " ~ 'contextOpen ~ (EncoderResult.base /: body){ _ ~ encode(_)} ~ 'contextClose
+      case Method(name, arguments,  body) => "public" ~ " " ~ name ~ 'argumentOpen ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
+      case Argument(atype, name) => atype ~ name
+    }
 
 		content.updated(element, 0 until content.text.size)
 	}

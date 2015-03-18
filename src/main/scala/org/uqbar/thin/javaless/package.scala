@@ -4,6 +4,7 @@ import scala.language.implicitConversions
 import scala.collection.JavaConversions._
 import java.util.IdentityHashMap
 
+
 package object javaless {
 
 	val DefaultTerminals = Map(
@@ -11,7 +12,8 @@ package object javaless {
 		'contextOpen -> "{",
 		'contextClose -> "}",
     'argumentOpen -> "(",
-    'argumentClose -> ")"
+    'argumentClose -> ")",
+    'sentenceSep -> ","
 	)
 
 	type Identifier = String

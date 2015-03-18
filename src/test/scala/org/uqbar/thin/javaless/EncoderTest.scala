@@ -20,15 +20,18 @@ class JavalessEncoderTest extends EncoderTest {
         }
 
         "for a simle empty method" in {
-          val target = Class("MyClass", List(Method("calculate", List(), List())))
-          val method = Method("calculate", List(), List())
-          target should beEncodedTo("class MyClass {public calculate(){}}", target -> (0 until 36), method -> (15 until 35))
+        	val method = Method("calculate", List(), List())
+          val target = Class("MyClass", List(method))
+          target should beEncodedTo("class MyClass {public calculate(){}}", method -> (15 until 35), target -> (0 until 36))
         }
 
-//        "for a simle method with arguments" in {
-//          val target = Class("MyClass", List(Method("calculate", List(Argument("void", "arg1"), Argument("void", "arg2")), List())))
-//          target should beEncodedTo("class MyClass { }", target -> (0 until 17))
-//        }
+        "for a simle method with arguments" in {       
+          val arg1 = Argument("void", "arg1")
+          val arg2 = Argument("void", "arg2")
+          val method = Method("calculate", List(arg1, arg2),List())
+          val target = Class("MyClass", List(method))
+          target should beEncodedTo("class MyClass {public calculate(void arg1, void arg2){}}", target-> (0 until 56) , method -> (15 until 55))
+        }
       }
     }
 

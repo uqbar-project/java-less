@@ -6,8 +6,6 @@ scalaVersion := "2.11.6"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-resolvers += "Uqbar Central" at "http://uqbar-wiki.org/mvn/releases"
-
 lazy val cacao = FDProject(
 	"org.uqbar" %% "voodoo" % "1.3.1",
 	"org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",

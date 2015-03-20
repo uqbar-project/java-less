@@ -81,16 +81,16 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
 			lazy val baseY = Success(pending = Y("bar",5) :: Nil )
 			lazy val baseQ = Success(pending = Q(X("foo"),Y("bar",5))  :: Nil)
 
-			lazy val x = "X:" ~ __ ^^ [X]()
+			lazy val x :Encoder[X] = "X:" ~ __
 			x(baseX) should be (Success("X:foo"))  
 			y(baseX) shouldBe a [Failure]
 
 			
-			lazy val y = "Y[" ~ __ ~ "|" ~ __ ~ "]" ^^[Y]()
+			lazy val y :Encoder[Y] = "Y[" ~ __ ~ "|" ~ __ ~ "]"
 			y(baseY) should be (Success("Y[bar|5]"))
 			x(baseY) shouldBe a [Failure]  
 			
-			lazy val q = "@{" ~ x ~ "," ~ y ~ "}" ^^[Q]()
+			lazy val q :Encoder[Q] = "@{" ~ x ~ "," ~ y ~ "}"
 			q(baseQ) should be (Success("@{X:foo,Y[bar|5]}"))
 		}
 		
@@ -99,9 +99,9 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
 			lazy val baseX = Success(pending = Z(X("foo")) :: Nil )
 			lazy val baseY = Success(pending = Z(Y("bar",5))  :: Nil)
 			
-			lazy val x = "X:" ~ __ ^^[X]()    
-			lazy val y = "Y:" ~ __ ~ ":" ~ __ ^^[Y]()
-			lazy val z = "Z[" ~ (x | y) ~ "]" ^^[Z]()
+			lazy val x :Encoder[X] = "X:" ~ __    
+			lazy val y :Encoder[Y] = "Y:" ~ __ ~ ":" ~ __
+			lazy val z :Encoder[Z] = "Z[" ~ (x | y) ~ "]"
  
 			z(baseX) should be (Success("Z[X:foo]"))
 			z(baseY) should be (Success("Z[Y:bar:5]"))			

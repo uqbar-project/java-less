@@ -19,7 +19,7 @@ class JavalessEncoderTest extends FreeSpec with Matchers with EncoderDefinition 
 				"for an empty class" in {
 					val target = Class("MyClass", Nil)
 					encode(classDefinition)(target) shouldBe a [Success]
-					encode(classDefinition)(target).asInstanceOf[Success].text shouldBe ("class MyClass { }")
+					encode(classDefinition)(target).asInstanceOf[Success].text shouldBe ("class MyClass {}")
 				}
 			}
 		}
@@ -77,35 +77,34 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
 		}
 
 		"Access encoders" in {
-			lazy val baseX = Success(pending = X("foo") )
-			lazy val baseY = Success(pending = Y("bar",5) )
-			lazy val baseQ = Success(pending = Q(X("foo"),Y("bar",5)) )
+			lazy val baseX = Success(pending = X("foo") :: Nil )
+			lazy val baseY = Success(pending = Y("bar",5) :: Nil )
+			lazy val baseQ = Success(pending = Q(X("foo"),Y("bar",5))  :: Nil)
 
-			lazy val x = "X:" ~ __ ^^ { x: X => x.s }
+			lazy val x = "X:" ~ __ ^^ [X]()
 			x(baseX) should be (Success("X:foo"))  
-			y(baseX) shouldBe a [Failure]  
+			y(baseX) shouldBe a [Failure]
 
 			
-			lazy val y = "Y[" ~ __ ~ "|" ~ __ ~ "]" ^^ { y: Y => new ~(y.s, y.n) }
+			lazy val y = "Y[" ~ __ ~ "|" ~ __ ~ "]" ^^[Y]()
 			y(baseY) should be (Success("Y[bar|5]"))
 			x(baseY) shouldBe a [Failure]  
 			
-			lazy val q = "@{" ~ x ~ "," ~ y ~ "}" ^^ {q: Q => new ~(q.x, q.y)}
+			lazy val q = "@{" ~ x ~ "," ~ y ~ "}" ^^[Q]()
 			q(baseQ) should be (Success("@{X:foo,Y[bar|5]}"))
 		}
 		
 		"Or encoders" in {
 			
-			lazy val baseX = Success(pending = Z(X("foo")) )
-			lazy val baseY = Success(pending = Z(Y("bar",5)) )
+			lazy val baseX = Success(pending = Z(X("foo")) :: Nil )
+			lazy val baseY = Success(pending = Z(Y("bar",5))  :: Nil)
 			
-			lazy val x = "X:" ~ __ ^^ { x: X => x.s }    
-			lazy val y = "Y:" ~ __ ^^ { y: Y => y.n }
-			lazy val t: Encoder[T] = x | y
-			lazy val z = "Z[" ~ t ~ "]" ^^ {z:Z => z.t}
+			lazy val x = "X:" ~ __ ^^[X]()    
+			lazy val y = "Y:" ~ __ ~ ":" ~ __ ^^[Y]()
+			lazy val z = "Z[" ~ (x | y) ~ "]" ^^[Z]()
  
 			z(baseX) should be (Success("Z[X:foo]"))
-			z(baseY) should be (Success("Z[Y:5]"))			
+			z(baseY) should be (Success("Z[Y:bar:5]"))			
 		}
 
 	}

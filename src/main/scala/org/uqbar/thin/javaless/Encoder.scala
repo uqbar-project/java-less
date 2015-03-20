@@ -48,49 +48,40 @@ trait Encoders {
 		def fold[T](seed: T)(f: (String, ReferenceTable, List[Any]) => T) = seed
 	}
 
-	implicit def StringToEncoder(s: String): Encoder[Any] = Encoder { _.map{ (text, references, pending) => (text + s, references, pending) } }
-	implicit def EncoderToEncoder[U <: Product : TypeTag](e: Encoder[List[Any]]) = e.^^[U]
-	
-	object Encoder {
-		def apply[T: TypeTag](f: EncoderResult => EncoderResult) = new Encoder[T] { def apply(r: EncoderResult) = f(r) }
-	}
-	abstract class Encoder[+T: TypeTag] extends (EncoderResult => EncoderResult) {
+	implicit def StringToEncoder(s: String): Encoder[Any] = _.map{ (text, references, pending) => (text + s, references, pending) }
+	implicit def EncoderToEncoder[U <: Product: TypeTag](e: Encoder[List[Any]]) = e.^^[U]
+
+	implicit class Encoder[T<: Any](tx: EncoderResult => EncoderResult) extends (EncoderResult => EncoderResult) {
+		def apply(target: EncoderResult) = tx(target)
+
 		protected def canBeAppliedTo[X](o: Any)(implicit tt: TypeTag[X]) = universe.runtimeMirror(o.getClass.getClassLoader).reflect(o).symbol.toType <:< tt.tpe
 
-		def ~[U: TypeTag](other: Encoder[U]) = Encoder[List[Any]](this andThen other)
+		def ~[U: TypeTag](other: Encoder[U]): Encoder[List[Any]] = this andThen other
 
-		def ^^[U: TypeTag, R >: T](f: U => List[R]) = Encoder[U] (_.flatMap{
-			case (text, references, p :: pending) =>
-				if (canBeAppliedTo[U](p)) this(Success(text, references, f(p.asInstanceOf[U]) ::: pending))
-				else Failure(s"$p could not be extracted as ${typeOf[U]}", p :: pending)
-		})
+		def ^^[U <: Product: TypeTag](): Encoder[U] = this ^^ { u: U => u.productIterator.toList }
+		def ^^[U: TypeTag, R >: T](f: U => List[R]): Encoder[U] = _.flatMap{
+			case (text, references, p :: pending) if (canBeAppliedTo[U](p)) => this(Success(text, references, f(p.asInstanceOf[U]) ::: pending))
+			case (_, _, pending) => Failure(s"Stack top could not be extracted as ${typeOf[U]}", pending)
+		}
 
-		def ^^[U <: Product: TypeTag](): Encoder[U] = this ^^ {u : U => u.productIterator.toList }
-
-		def |[U >: T: TypeTag](other: Encoder[U]) = Encoder[U] { r => this(r).fold(other(r))(Success.tupled(_, _, _)) }
-		def * = Encoder[List[T]]{
-			_.map{
-				case (text, references, (p: List[T]) :: pending) =>
-					(text + p.map{ e => this(Success(pending = e :: Nil)) }.mkString, references, pending)
-			}
+		def |[U >: T: TypeTag](other: Encoder[U]): Encoder[U] = r => this(r).fold(other(r))(Success.tupled(_, _, _))
+		def * : Encoder[List[T]] = _.flatMap{
+			case (text, references, (p: List[T]) :: pending) => Success(text + p.map{ e => this(Success(pending = e :: Nil)) }.mkString, references, pending)
+			case (_, _, pending) => Failure("Stack top can't be extracted to list", pending)
 		}
     
-    def repsep(sep: String) = Encoder[List[T]] {
-        _.map{
-        case (text, references, (p: List[T]) :: pending) =>
-          (text + p.map{ e => this(Success(pending = e :: Nil)) }.mkString(sep), references, pending)
-        case (text, references, Nil) => (text, references , Nil)
-      }
+    def repsep(sep: String): Encoder[List[T]] = _.flatMap{
+      case (text, references, (p: List[T]) :: pending) => Success(text + p.map{ e => this(Success(pending = e :: Nil)) }.mkString(sep), references, pending)
+      case (_, _, pending) => Failure("Stack top can't be extracted to list", pending)
     }
 	}
 
-	object __ extends Encoder[Any] {
-		def apply(target: EncoderResult) = target map { 
-      case (text, references, p :: pending) => (text + p, references, pending) 
-      case  (text, reference , Nil) => (text, reference, Nil)}
-	}
+	object __ extends Encoder[String](_ flatMap {
+		case (text, references, p :: pending) => Success(text + p, references, pending)
+		case (_, _, Nil) => Failure("Empty stack can't be extracted", Nil)
+	})
 
-	def encode[T](encoder: Encoder[T])(target: T*) = encoder(Success(pending = target.toList))
+	def encode[T](encoder: Encoder[T])(target: T) = encoder(Success(pending = target :: Nil))
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
@@ -104,23 +95,15 @@ class Encoder(_terminals: => Map[Symbol, String] = DefaultTerminals) extends Enc
 }
 
 trait EncoderDefinition extends Encoders {
-	
+
 	val terminals: Map[Symbol, String]
 
 	implicit protected def SymbolToEncoder(s: Symbol): Encoder[Any] = terminals(s)
 
-	lazy val program = classDefinition.* ^^ { p: Program => p.definitions }
-	lazy val classDefinition = 'class ~ " " ~ __ ~ " " ~ 'contextOpen ~ classMember.* ~ 'contextClose ^^[Class]() 
+	lazy val program: Encoder[Program] = classDefinition.*
+	lazy val classDefinition: Encoder[Class] = 'class ~ " " ~ __ ~ " " ~ 'contextOpen ~ classMember.* ~ 'contextClose
 	lazy val classMember: Encoder[Any] = method
-  lazy val method = "public" ~ " " ~ __ ~ 'argumentOpen ~  argument.repsep(",") ~ 'argumentClose ~ 'contextOpen ~ 'contextClose ^^ [Method]()
-  lazy val argument = __ ~ " " ~ __ ^^ [Argument]()
+  lazy val method = "public" ~ " " ~ __ ~ 'argumentOpen ~  argument.repsep(",") ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
+  lazy val argument = __ ~ " " ~ __
 
-	//	protected def encode(element: SyntaxElement): EncoderResult = { 
-	//		val content: EncoderResult = element match {
-	//			case Program(definitions) => (EncoderResult.base /: definitions){ _ ~ encode(_) }
-	//			case Class(name, body) => 'class ~ " " ~ name ~ " " ~ 'contextOpen ~ " " ~ 'contextClose
-	//		}
-	//
-	//		content.updated(element, 0 until content.text.size)
-	//	}
 }

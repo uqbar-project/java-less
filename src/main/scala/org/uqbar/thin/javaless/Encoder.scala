@@ -65,23 +65,22 @@ trait Encoders {
 		}
 
 		def |[U >: T: TypeTag](other: Encoder[U]): Encoder[U] = r => this(r).fold(other(r))(Success.tupled(_, _, _))
-		def * : Encoder[List[T]] = _.flatMap{
+		def * = *~("")
+    
+    def *~(sep: Encoder[Any]): Encoder[List[T]] = _.flatMap{
 			case (text, references, (p: List[T]) :: pending) =>
 				((Success(text, references, Nil): EncoderResult) /: p){ (s, e) =>
 					s.flatMap{ (t1, r1, _) =>
-						this(Success(pending = e :: Nil)).map { (t2, r2, _) =>
-							(t1 + t2, references, pending)
+						sep(Success()).flatMap {(s1,_,_) =>
+							this(Success(pending = e :: Nil)).map { (t2, r2, _) =>
+								if (e == p.head) (t1 + t2, references, pending) else (t1 + s1 + t2, references, pending)
+							}
 						}
 					}
 
 				}
 			case (_, _, pending) => Failure("Stack top can't be extracted to list", pending)
 		}
-    
-    def repsep(sep: String): Encoder[List[T]] = _.flatMap{
-      case (text, references, (p: List[T]) :: pending) => Success(text + p.map{ e => this(Success(pending = e :: Nil)) }.mkString(sep), references, pending)
-      case (_, _, pending) => Failure("Stack top can't be extracted to list", pending)
-    }
 	}
 
 	object __ extends Encoder[String](_ flatMap {
@@ -110,8 +109,8 @@ trait EncoderDefinition extends Encoders {
 
 	lazy val program: Encoder[Program] = classDefinition.*
 	lazy val classDefinition: Encoder[Class] = 'class ~ " " ~ __ ~ " " ~ 'contextOpen ~ classMember.* ~ 'contextClose
-	lazy val classMember: Encoder[Any] = method
-  lazy val method = "public" ~ " " ~ __ ~ 'argumentOpen ~  argument.repsep(",") ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
-  lazy val argument = __ ~ " " ~ __
+	lazy val classMember = method
+  lazy val method: Encoder[Method] = "public" ~ " " ~ __ ~ 'argumentOpen ~  argument.*~('argumentSeparator ~ " ") ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
+  lazy val argument: Encoder[Argument] = __ ~ " " ~ __
 
 }

@@ -22,24 +22,24 @@ class JavalessEncoderTest extends FreeSpec with Matchers with EncoderDefinition 
 					encode(classDefinition)(target).asInstanceOf[Success].text shouldBe ("class MyClass {}")
 				}
         
-        "for a simle empty method" in {
+        "for a simple empty method" in {
           val method1 = Method("calculate", Nil, Nil)
           val target = Class("MyClass", List(method1))
           
           encode(classDefinition)(target) shouldBe a [Success]
-          encode(method)(List(target)).asInstanceOf[Success].text shouldBe ("public calculate(){}")
+          encode(method)(method1).asInstanceOf[Success].text shouldBe ("public calculate(){}")
           encode(classDefinition)(target).asInstanceOf[Success].text shouldBe ("class MyClass {public calculate(){}}")
         }
 
-        "for a simle method with arguments" in {       
+        "for a simple method with arguments" in {       
           val arg1 = Argument("void", "arg1")
           val arg2 = Argument("void", "arg2")
-          val method1 = Method("calculate", List(Argument("void", "arg1"), arg2),List())
+          val method1 = Method("calculate", List(arg1, arg2),List())
           val target = Class("MyClass", List(method1))
           
-          encode(argument)(List(arg1)).asInstanceOf[Success].text shouldBe ("void arg1")
-          encode(argument)(List(arg2)).asInstanceOf[Success].text shouldBe ("void arg2")
-          encode(method)(List(method1)).asInstanceOf[Success].text shouldBe ("public calculate(){}")
+          encode(argument)(arg1).asInstanceOf[Success].text shouldBe ("void arg1")
+          encode(argument)(arg2).asInstanceOf[Success].text shouldBe ("void arg2")
+          encode(method)(method1).asInstanceOf[Success].text shouldBe ("public calculate(void arg1, void arg2){}")
           encode(classDefinition)(target).asInstanceOf[Success].text shouldBe ("class MyClass {public calculate(void arg1, void arg2){}}")
         }
 			}

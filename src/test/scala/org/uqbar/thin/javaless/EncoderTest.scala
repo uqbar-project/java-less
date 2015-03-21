@@ -62,6 +62,7 @@ case class X(s: String) extends T
 case class Y(s: String,n: Int) extends T
 case class Q(x: X, y: Y)
 case class Z(t: T)
+case class W(ts: List[T])
 
 class EncodersTest extends FreeSpec with Matchers with Encoders {
 
@@ -105,6 +106,16 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
  
 			z(baseX) should be (Success("Z[X:foo]"))
 			z(baseY) should be (Success("Z[Y:bar:5]"))			
+		}
+		
+		"Sequence encoders" in {
+			lazy val baseW = Success(pending = W(X("foo") :: Y("bar",5) :: X("meh") :: Nil) :: Nil)
+			
+			lazy val x: Encoder[X] = "X:" ~ __
+			lazy val y :Encoder[Y] = "Y:" ~ __ ~ ":" ~ __
+			lazy val w :Encoder[W] = "W[" ~ (x | y).* ~ "]"
+			
+			w(baseW) should be (Success("W[X:fooY:bar:5X:meh]"))
 		}
 
 	}

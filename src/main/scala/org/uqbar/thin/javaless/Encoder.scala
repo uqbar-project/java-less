@@ -51,7 +51,7 @@ trait Encoders {
 	implicit def StringToEncoder(s: String): Encoder[Any] = _.map{ (text, references, pending) => (text + s, references, pending) }
 	implicit def EncoderToEncoder[U <: Product: TypeTag](e: Encoder[List[Any]]) = e.^^[U]
 
-	implicit class Encoder[T<: Any](tx: EncoderResult => EncoderResult) extends (EncoderResult => EncoderResult) {
+	implicit class Encoder[T <: Any](tx: EncoderResult => EncoderResult) extends (EncoderResult => EncoderResult) {
 		def apply(target: EncoderResult) = tx(target)
 
 		protected def canBeAppliedTo[X](o: Any)(implicit tt: TypeTag[X]) = universe.runtimeMirror(o.getClass.getClassLoader).reflect(o).symbol.toType <:< tt.tpe
@@ -66,7 +66,15 @@ trait Encoders {
 
 		def |[U >: T: TypeTag](other: Encoder[U]): Encoder[U] = r => this(r).fold(other(r))(Success.tupled(_, _, _))
 		def * : Encoder[List[T]] = _.flatMap{
-			case (text, references, (p: List[T]) :: pending) => Success(text + p.map{ e => this(Success(pending = e :: Nil)) }.mkString, references, pending)
+			case (text, references, (p: List[T]) :: pending) =>
+				((Success(text, references, Nil): EncoderResult) /: p){ (s, e) =>
+					s.flatMap{ (t1, r1, _) =>
+						this(Success(pending = e :: Nil)).map { (t2, r2, _) =>
+							(t1 + t2, references, pending)
+						}
+					}
+
+				}
 			case (_, _, pending) => Failure("Stack top can't be extracted to list", pending)
 		}
 	}

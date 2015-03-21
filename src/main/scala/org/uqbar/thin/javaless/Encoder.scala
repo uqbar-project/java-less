@@ -77,6 +77,11 @@ trait Encoders {
 				}
 			case (_, _, pending) => Failure("Stack top can't be extracted to list", pending)
 		}
+    
+    def repsep(sep: String): Encoder[List[T]] = _.flatMap{
+      case (text, references, (p: List[T]) :: pending) => Success(text + p.map{ e => this(Success(pending = e :: Nil)) }.mkString(sep), references, pending)
+      case (_, _, pending) => Failure("Stack top can't be extracted to list", pending)
+    }
 	}
 
 	object __ extends Encoder[String](_ flatMap {
@@ -105,6 +110,8 @@ trait EncoderDefinition extends Encoders {
 
 	lazy val program: Encoder[Program] = classDefinition.*
 	lazy val classDefinition: Encoder[Class] = 'class ~ " " ~ __ ~ " " ~ 'contextOpen ~ classMember.* ~ 'contextClose
-	lazy val classMember: Encoder[Any] = ""
+	lazy val classMember: Encoder[Any] = method
+  lazy val method = "public" ~ " " ~ __ ~ 'argumentOpen ~  argument.repsep(",") ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
+  lazy val argument = __ ~ " " ~ __
 
 }

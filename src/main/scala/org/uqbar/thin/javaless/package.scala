@@ -18,21 +18,21 @@ package object javaless {
 
 	type Identifier = String
 	
-	implicit class ExtendedIdentityHashMap(inner: IdentityHashMap[SyntaxElement, Range]) {
-		def ++(other: IdentityHashMap[SyntaxElement, Range]) = {
-			val next = new IdentityHashMap[SyntaxElement, Range]
+	implicit class ExtendedIdentityHashMap(inner: IdentityHashMap[Any, Range]) {
+		def ++(other: IdentityHashMap[Any, Range]) = {
+			val next = new IdentityHashMap[Any, Range]
 			next.putAll(inner)
 			next.putAll(other)
 			next
 		}
 		def shifted(ammount: Int) = {
-			val next = new IdentityHashMap[SyntaxElement, Range]
+			val next = new IdentityHashMap[Any, Range]
 			for (entry <- inner.entrySet) next.put(entry.getKey, entry.getValue.start + ammount until entry.getValue.end + ammount)
 			next
 		}
 
-		def updated(key: SyntaxElement, value: Range) = {
-			val updatedReferences = new IdentityHashMap[SyntaxElement, Range]
+		def updated(key: Any, value: Range) = {
+			val updatedReferences = new IdentityHashMap[Any, Range]
 			updatedReferences.putAll(inner)
 			updatedReferences.put(key, value)
 			updatedReferences

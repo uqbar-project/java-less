@@ -6,6 +6,7 @@ import java.util.IdentityHashMap
 import scala.reflect.runtime.universe.TypeTag
 import scala.reflect.runtime.universe.typeOf
 import scala.reflect.runtime.universe
+import scala.util.Try
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 // ENCODER RESULT
@@ -30,31 +31,6 @@ import scala.reflect.runtime.universe
 // ENCODERS
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
-object EncoderResult {
-	def apply(content: (String, IdentityHashMap[Any, Range], List[Any])): EncoderResult = Success.tupled(content)
-}
-trait EncoderResult {
-	def map(f: ((String, IdentityHashMap[Any, Range], List[Any])) => (String, IdentityHashMap[Any, Range], List[Any])): EncoderResult
-	def flatMap(f: ((String, IdentityHashMap[Any, Range], List[Any])) => EncoderResult): EncoderResult
-	def fold[T](seed: T)(f: (String, IdentityHashMap[Any, Range], List[Any]) => T): T
-	def withFilter(f: ((String, IdentityHashMap[Any, Range], List[Any])) => Boolean): EncoderResult
-	def foreach(f: ((String, IdentityHashMap[Any, Range], List[Any])) => Unit): Unit
-}
-case class Success(text: String = "", references: IdentityHashMap[Any, Range] = new IdentityHashMap, pending: List[Any] = Nil) extends EncoderResult {
-	def map(f: ((String, IdentityHashMap[Any, Range], List[Any])) => (String, IdentityHashMap[Any, Range], List[Any])) = Success.tupled(f(text, references, pending))
-	def flatMap(f: ((String, IdentityHashMap[Any, Range], List[Any])) => EncoderResult) = f(text, references, pending)
-	def fold[T](seed: T)(f: (String, IdentityHashMap[Any, Range], List[Any]) => T) = f(text, references, pending)
-	def withFilter(f: ((String, IdentityHashMap[Any, Range], List[Any])) => Boolean) = if (f(text, references, pending)) this else Failure(s"$this could not be extracted as expected")
-	def foreach(f: ((String, IdentityHashMap[Any, Range], List[Any])) => Unit) = f(text, references, pending)
-}
-case class Failure(reason: String) extends EncoderResult {
-	def map(f: ((String, IdentityHashMap[Any, Range], List[Any])) => (String, IdentityHashMap[Any, Range], List[Any])) = this
-	def flatMap(f: ((String, IdentityHashMap[Any, Range], List[Any])) => EncoderResult) = this
-	def fold[T](seed: T)(f: (String, IdentityHashMap[Any, Range], List[Any]) => T) = seed
-	def withFilter(f: ((String, IdentityHashMap[Any, Range], List[Any])) => Boolean) = this
-	def foreach(f: ((String, IdentityHashMap[Any, Range], List[Any])) => Unit) {}
-}
-
 trait Encoders {
 	implicit def StringToEncoder(s: String): Encoder[Any] = new Encoder(r => for ((_, references, pending) <- r) yield (s, references, pending))
 	implicit def EncoderToEncoder[U <: Product: TypeTag](e: Encoder[_]): Encoder[U] = e.^^[U]
@@ -66,7 +42,7 @@ trait Encoders {
 
 		def ~[U: TypeTag](other: Encoder[U]): Encoder[List[Any]] = new Encoder(r => for {
 			previous @ (previousText, previousReferences, previousPending) <- this(r)
-			(nextText, nextReferences, nextPending) <- other(EncoderResult(previous))
+			(nextText, nextReferences, nextPending) <- other(Try(previous))
 		} yield (previousText + nextText, nextReferences.shifted(previousText.size) ++ previousReferences, nextPending)
 		)
 
@@ -74,12 +50,12 @@ trait Encoders {
 		def ^^[U: TypeTag, R >: T](f: U => List[R]): Encoder[U] = new Encoder(r =>
 			for {
 				(previousText, previousReferences, p :: previousPending) <- r if canBeAppliedTo[U](p)
-				(nextText, nextReferences, nextPending) <- this(Success(previousText, previousReferences, f(p.asInstanceOf[U]) ::: previousPending))
+				(nextText, nextReferences, nextPending) <- this(Try(previousText, previousReferences, f(p.asInstanceOf[U]) ::: previousPending))
 			} yield (nextText, nextReferences.updated(p, 0 until nextText.size), nextPending)
 		)
 		
 		def |[U >: T: TypeTag, V <: U](other: Encoder[V]): Encoder[U] = new Encoder(r =>
-			this(r).fold(other(r))(EncoderResult(_, _, _))
+			this(r).orElse(other(r))
 		)
 
 		def * = *~("")
@@ -87,17 +63,17 @@ trait Encoders {
 		def *~(separator: Encoder[_]): Encoder[List[T]] = new Encoder(_.flatMap {
 			case (text, references, (ps: List[_]) :: pending) =>
 				val encoder = if (ps.isEmpty) {r: EncoderResult => r} else 1.until(ps.size).map{ _ => separator ~ this }.fold(this)(_ ~ _)
-				encoder(EncoderResult(text, references, ps))
-			case (_, _, pending) => Failure(s"Stack top can't be extracted to list on $this")
+				encoder(Try(text, references, ps))
+			case (_, _, pending) => throw new RuntimeException(s"Stack top can't be extracted to list on $this")
 		})
 	}
 
 	object __ extends Encoder[Any](_ flatMap {
-		case (text, references, p :: pending) => Success(p.toString, references, pending)
-		case (_, _, Nil) => Failure(s"Empty stack can't be extracted on $this")
+		case (text, references, p :: pending) => Try(p.toString, references, pending)
+		case (_, _, Nil) => throw new RuntimeException(s"Empty stack can't be extracted on $this")
 	})
 
-	def encode[T](encoder: Encoder[T])(target: T) = encoder(Success(pending = target :: Nil))
+	def encode[T](encoder: Encoder[T])(target: T) = encoder(EncoderResult(target))
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀

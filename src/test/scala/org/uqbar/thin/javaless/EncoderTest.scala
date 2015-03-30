@@ -7,6 +7,7 @@ import org.scalatest.Matchers
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 import java.util.IdentityHashMap
+import scala.util.Success
 
 class JavalessEncoderTest extends FreeSpec with Matchers with EncoderDefinition {
 
@@ -55,34 +56,34 @@ class JavalessEncoderTest extends FreeSpec with Matchers with EncoderDefinition 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
 trait EncoderTest[E <: Encoders] extends Matchers {
-
-	case class beEncodedTo[T](expectedText: String)(expectedReferences: (T, Range)*)(implicit encoder: E#Encoder[T]) extends Matcher[T] {
-		def apply(target: T) = {
-			val result = encoder(Success(pending = target :: Nil))
-			val success = result match {
-				case Success(`expectedText`, references, _) => references.size == expectedReferences.size && expectedReferences.forall{ case (key, value) => references.get(key) == value }
-				case _ => false
-			}
-
-			MatchResult(
-				success,
-				s"Encoded $result did not match Success($expectedText, $expectedReferences, Nil)}",
-				s"Encoded $result matched Success($expectedText, $expectedReferences, Nil)}"
-			)
-		}
-	}
-
-	case class beEncoded(implicit encoder: E#Encoder[_]) extends Matcher[T] {
-		def apply(target: T) = {
-			val result = encoder(Success(pending = target :: Nil))
-
-			MatchResult(
-				result.isInstanceOf[Success],
-				s"Encode was not a success: $result",
-				s"Encode was a success: $result"
-			)
-		}
-	}
+//
+//	case class beEncodedTo[T](expectedText: String)(expectedReferences: (T, Range)*)(implicit encoder: E#Encoder[T]) extends Matcher[T] {
+//		def apply(target: T) = {
+//			val result = encoder(Success(pending = target :: Nil))
+//			val success = result match {
+//				case Success(`expectedText`, references, _) => references.size == expectedReferences.size && expectedReferences.forall{ case (key, value) => references.get(key) == value }
+//				case _ => false
+//			}
+//
+//			MatchResult(
+//				success,
+//				s"Encoded $result did not match Success($expectedText, $expectedReferences, Nil)}",
+//				s"Encoded $result matched Success($expectedText, $expectedReferences, Nil)}"
+//			)
+//		}
+//	}
+//
+//	case class beEncoded(implicit encoder: E#Encoder[_]) extends Matcher[T] {
+//		def apply(target: T) = {
+//			val result = encoder(Success(pending = target :: Nil))
+//
+//			MatchResult(
+//				result.isInstanceOf[Success],
+//				s"Encode was not a success: $result",
+//				s"Encode was a success: $result"
+//			)
+//		}
+//	}
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
@@ -120,44 +121,44 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 
 		"Access encoders" in {
 
-			foo(Success()) should resultIn("Foo")()
-			(foo ~ foo : Encoder[_])(Success()) should resultIn("FooFoo")()
-			(foo ~ foo ~ foo : Encoder[_])(Success()) should resultIn("FooFooFoo")()
+			foo(EncoderResult()) should resultIn("Foo")()
+			(foo ~ foo : Encoder[_])(EncoderResult()) should resultIn("FooFoo")()
+			(foo ~ foo ~ foo : Encoder[_])(EncoderResult()) should resultIn("FooFooFoo")()
 			 
-			x(Success(pending = anX :: Nil)) should resultIn("X:foo")(anX -> 0.until(5))
-			y(Success(pending = aY :: Nil)) should resultIn("Y:bar:5")(aY -> 0.until(7))
+			x(EncoderResult(anX)) should resultIn("X:foo")(anX -> 0.until(5))
+			y(EncoderResult(aY)) should resultIn("Y:bar:5")(aY -> 0.until(7))
 
 			
-			(foo ~ x : Encoder[_])(Success(pending = anX :: Nil)) should resultIn("FooX:foo")(anX -> 3.until(8))
+			(foo ~ x : Encoder[_])(EncoderResult(anX)) should resultIn("FooX:foo")(anX -> 3.until(8))
 
-			(x ~ foo : Encoder[_])(Success(pending = anX :: Nil)) should resultIn("X:fooFoo")(anX -> 0.until(5))
+			(x ~ foo : Encoder[_])(EncoderResult(anX)) should resultIn("X:fooFoo")(anX -> 0.until(5))
 
-			(x ~ y : Encoder[_])(Success(pending = anX :: aY :: Nil)) should resultIn("X:fooY:bar:5")(anX -> 0.until(5), aY -> 5.until(12))
+			(x ~ y : Encoder[_])(EncoderResult(anX, aY)) should resultIn("X:fooY:bar:5")(anX -> 0.until(5), aY -> 5.until(12))
 
-			q(Success(pending = aQ :: Nil)) should resultIn("Q(X:fooY:bar:5)")(aQ -> 0.until(15), anX -> 2.until(7), aY -> 7.until(14))
+			q(EncoderResult(aQ)) should resultIn("Q(X:fooY:bar:5)")(aQ -> 0.until(15), anX -> 2.until(7), aY -> 7.until(14))
 
-			(x | y : Encoder[_])(Success(pending = anX :: Nil)) should resultIn("X:foo")(anX -> 0.until(5))
-			(y | x : Encoder[_])(Success(pending = anX :: Nil)) should resultIn("X:foo")(anX -> 0.until(5))
-			(x | y : Encoder[_])(Success(pending = aY :: Nil)) should resultIn("Y:bar:5")(aY -> 0.until(7))
-			(y | x : Encoder[_])(Success(pending = aY :: Nil)) should resultIn("Y:bar:5")(aY -> 0.until(7))
+			(x | y : Encoder[_])(EncoderResult(anX)) should resultIn("X:foo")(anX -> 0.until(5))
+			(y | x : Encoder[_])(EncoderResult(anX)) should resultIn("X:foo")(anX -> 0.until(5))
+			(x | y : Encoder[_])(EncoderResult(aY)) should resultIn("Y:bar:5")(aY -> 0.until(7))
+			(y | x : Encoder[_])(EncoderResult(aY)) should resultIn("Y:bar:5")(aY -> 0.until(7))
 
-			z(Success(pending = aZ :: Nil)) should resultIn("Z(X:foo)")(aZ -> 0.until(8), anX -> 2.until(7))
-			z(Success(pending = anotherZ :: Nil)) should resultIn("Z(Y:bar:5)")(anotherZ -> 0.until(10), aY -> 2.until(9))
+			z(EncoderResult(aZ)) should resultIn("Z(X:foo)")(aZ -> 0.until(8), anX -> 2.until(7))
+			z(EncoderResult(anotherZ)) should resultIn("Z(Y:bar:5)")(anotherZ -> 0.until(10), aY -> 2.until(9))
 			
-			(t.*)(Success(pending = List(anX,aY) :: Nil)) should resultIn("X:fooY:bar:5")(anX -> 0.until(5), aY -> 5.until(12))
-			(t *~ "|")(Success(pending = List(anX,aY) :: Nil)) should resultIn("X:foo|Y:bar:5")(anX -> 0.until(5), aY -> 6.until(13))
+			(t.*)(EncoderResult(List(anX,aY))) should resultIn("X:fooY:bar:5")(anX -> 0.until(5), aY -> 5.until(12))
+			(t *~ "|")(EncoderResult(List(anX,aY))) should resultIn("X:foo|Y:bar:5")(anX -> 0.until(5), aY -> 6.until(13))
 			
-			w(Success(pending = aW :: Nil)) should resultIn("W(X:fooY:bar:5)")(aW -> 0.until(15), anX -> 2.until(7), aY -> 7.until(14))
+			w(EncoderResult(aW)) should resultIn("W(X:fooY:bar:5)")(aW -> 0.until(15), anX -> 2.until(7), aY -> 7.until(14))
 			
 			
 		}
 
 		case class resultIn(expectedText: String)(expectedReferences: (Any, Range)*) extends Matcher[EncoderResult] {
 			def apply(target: EncoderResult) = target match {
-					case failure: Failure => MatchResult(false, s"Encoder failed: $failure", s"")
-					case Success(text, _, _) if text != expectedText => MatchResult(false, s"Encoded text: $text did not match expected: $expectedText", s"")
-					case Success(_, references, _) if references.size != expectedReferences.size || expectedReferences.exists{ case (key, value) => references.get(key) != value } => MatchResult(false, s"Encoded references: $references did not match expected: $expectedReferences", "")
-					case Success(_, _, _::_) => MatchResult(false, s"Non empty pending", s"")
+					case failure if failure.isFailure => MatchResult(false, s"Encoder failed: $failure", s"")
+					case Success((text, _, _)) if text != expectedText => MatchResult(false, s"Encoded text: $text did not match expected: $expectedText", s"")
+					case Success((_, references, _)) if references.size != expectedReferences.size || expectedReferences.exists{ case (key, value) => references.get(key) != value } => MatchResult(false, s"Encoded references: $references did not match expected: $expectedReferences", "")
+					case Success((_, _, _::_)) => MatchResult(false, s"Non empty pending", s"")
 					case _ => MatchResult(true, s"", s"Encoded should not have result in Success($expectedText,$expectedReferences), but did")
 			}
 		}

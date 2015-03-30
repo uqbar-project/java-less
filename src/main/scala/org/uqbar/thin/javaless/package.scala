@@ -3,10 +3,15 @@ package org.uqbar.thin
 import scala.language.implicitConversions
 import scala.collection.JavaConversions._
 import java.util.IdentityHashMap
+import scala.util.Try
 
 
 package object javaless {
 
+	type EncoderResult = Try[(String,IdentityHashMap[Any,Range], List[Any])]
+	def EncoderResult(pending: Any*): EncoderResult = Try("", new IdentityHashMap, pending.toList)
+	
+	
 	val DefaultTerminals = Map(
 		'class -> "class",
 		'contextOpen -> "{",

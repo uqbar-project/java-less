@@ -9,25 +9,6 @@ import scala.reflect.runtime.universe
 import scala.util.Try
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-// ENCODER RESULT
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-
-//sealed class EncoderResult(val pending: List[Any]) {
-//	def ~(other: EncoderResult) = this
-//	def updated(key: SyntaxElement, value: Range) = this
-//	def text = ""
-//}
-//case class Error(pending: List[Any]) extends EncoderResult(pending)
-//case class Failure(pending: List[Any]) extends EncoderResult(pending)
-//case class Success(text: String = "", references: IdentityHashMap[SyntaxElement, Range] = new IdentityHashMap, pending: List[Any]) extends EncoderResult(pending) {
-//	def ~(other: EncoderResult) = other match {
-//		case Success(otherText, otherReferences,_) => copy(text ++ otherText, references ++ otherReferences.shifted(text.size))
-//		case _ => other
-//	}
-//	def updated(key: SyntaxElement, value: Range) = copy(references = references.updated(key, value))
-//}
-
-//▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 // ENCODERS
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
@@ -42,7 +23,7 @@ trait Encoders {
 
 		def ~[U: TypeTag](other: Encoder[U]): Encoder[List[Any]] = new Encoder(r => for {
 			previous @ (previousText, previousReferences, previousPending) <- this(r)
-			(nextText, nextReferences, nextPending) <- other(Try(previous))
+			(nextText, nextReferences, nextPending) <- other(Try("",previousReferences,previousPending))
 		} yield (previousText + nextText, nextReferences.shifted(previousText.size) ++ previousReferences, nextPending)
 		)
 
@@ -61,9 +42,9 @@ trait Encoders {
 		def * = *~("")
 
 		def *~(separator: Encoder[_]): Encoder[List[T]] = new Encoder(_.flatMap {
-			case (text, references, (ps: List[_]) :: pending) =>
+			case (_, references, (ps: List[_]) :: _) =>
 				val encoder = if (ps.isEmpty) {r: EncoderResult => r} else 1.until(ps.size).map{ _ => separator ~ this }.fold(this)(_ ~ _)
-				encoder(Try(text, references, ps))
+				encoder(Try("", references, ps))
 			case (_, _, pending) => throw new RuntimeException(s"Stack top can't be extracted to list on $this")
 		})
 	}
@@ -94,8 +75,8 @@ trait EncoderDefinition extends Encoders {
 
 	lazy val program: Encoder[Program] = classDefinition.*
 	lazy val classDefinition: Encoder[Class] = 'class ~ " " ~ __ ~ " " ~ 'contextOpen ~ classMember.* ~ 'contextClose
-	lazy val classMember = method
-	lazy val method: Encoder[Method] = "public" ~ " " ~ __ ~ 'argumentOpen ~ argument.*~('argumentSeparator ~ " ") ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
+	lazy val classMember = methodDefinition
+	lazy val methodDefinition: Encoder[Method] = 'public ~ " " ~ __ ~ 'argumentOpen ~ argument.*~('argumentSeparator ~ " ") ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
 	lazy val argument: Encoder[Argument] = __ ~ " " ~ __
 
 }

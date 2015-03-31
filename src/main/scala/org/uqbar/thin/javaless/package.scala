@@ -18,7 +18,8 @@ package object javaless {
 		'contextClose -> "}",
     'argumentOpen -> "(",
     'argumentClose -> ")",
-    'argumentSeparator -> ","
+    'argumentSeparator -> ",",
+    'public -> "public"
 	)
 
 	type Identifier = String

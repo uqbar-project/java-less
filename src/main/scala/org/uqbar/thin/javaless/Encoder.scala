@@ -7,6 +7,7 @@ import scala.reflect.runtime.universe.TypeTag
 import scala.reflect.runtime.universe.typeOf
 import scala.reflect.runtime.universe
 import scala.util.Try
+import org.uqbar.utils.collections.immutable.IdentityMap
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 // ENCODERS
@@ -24,7 +25,8 @@ trait Encoders {
 		def ~[U: TypeTag](other: Encoder[U]): Encoder[List[Any]] = new Encoder(r => for {
 			previous @ (previousText, previousReferences, previousPending) <- this(r)
 			(nextText, nextReferences, nextPending) <- other(Try("",previousReferences,previousPending))
-		} yield (previousText + nextText, nextReferences.shifted(previousText.size) ++ previousReferences, nextPending)
+			shiftedNextReferences = nextReferences.map{case (k,v) => k -> (v.start + previousText.size until v.end + previousText.size)}
+			} yield (previousText + nextText,	shiftedNextReferences ++ previousReferences, nextPending)
 		)
 
 		def ^^[U <: Product: TypeTag](): Encoder[U] = this ^^ { u: U => u.productIterator.toList }
@@ -32,7 +34,7 @@ trait Encoders {
 			for {
 				(previousText, previousReferences, p :: previousPending) <- r if canBeAppliedTo[U](p)
 				(nextText, nextReferences, nextPending) <- this(Try(previousText, previousReferences, f(p.asInstanceOf[U]) ::: previousPending))
-			} yield (nextText, nextReferences.updated(p, 0 until nextText.size), nextPending)
+			} yield (nextText, nextReferences + (p, 0 until nextText.size), nextPending)
 		)
 		
 		def |[U >: T: TypeTag, V <: U](other: Encoder[V]): Encoder[U] = new Encoder(r =>

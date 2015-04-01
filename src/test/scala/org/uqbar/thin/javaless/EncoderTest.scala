@@ -1,14 +1,13 @@
 package org.uqbar.thin.javaless
 
 import scala.language.implicitConversions
-import scala.collection.JavaConversions._
+import scala.reflect.runtime.universe
+import scala.util.Success
+
 import org.scalatest.FreeSpec
 import org.scalatest.Matchers
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
-import java.util.IdentityHashMap
-import scala.util.Success
-import scala.util.Try
 
 class JavalessEncoderTest extends FreeSpec with EncoderTest[EncoderDefinition] with EncoderDefinition {
 
@@ -59,7 +58,7 @@ trait EncoderTest[E <: Encoders] extends Matchers {
 		def apply(target: T) = {
 			val result = encoder(if(target.isInstanceOf[List[_]]) EncoderResult(target.asInstanceOf[List[_]] : _*) else EncoderResult(target))
 			val success = result match {
-				case Success((`expectedText`, references, _)) => references.size == expectedReferences.size && expectedReferences.forall{ case (key, value) => references.get(key) == value }
+				case Success((`expectedText`, references, _)) => references.size == expectedReferences.size && expectedReferences.forall{ case (key, value) => references.get(key) == Some(value) }
 				case _ => false
 			}
 
@@ -155,12 +154,12 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 			
 		}
 
-		case class resultIn(expectedText: String)(expectedReferences: (Any, Range)*) extends Matcher[EncoderResult] {
+		case class resultIn(expectedText: String, expectedPending: List[Any] = Nil)(expectedReferences: (Any, Range)*) extends Matcher[EncoderResult] {
 			def apply(target: EncoderResult) = target match {
 					case failure if failure.isFailure => MatchResult(false, s"Encoder failed: $failure", s"")
 					case Success((text, _, _)) if text != expectedText => MatchResult(false, s"Encoded text: $text did not match expected: $expectedText", s"")
-					case Success((_, references, _)) if references.size != expectedReferences.size || expectedReferences.exists{ case (key, value) => references.get(key) != value } => MatchResult(false, s"Encoded references: $references did not match expected: $expectedReferences", "")
-					case Success((_, _, pending @ (_::_))) => MatchResult(false, s"Non empty pending: $pending", s"")
+					case Success((_, references, _)) if references.size != expectedReferences.size || expectedReferences.exists{ case (key, value) => references.get(key) != Some(value) } => MatchResult(false, s"Encoded references: $references did not match expected: $expectedReferences", "")
+					case Success((_, _, pending )) if pending != expectedPending => MatchResult(false, s"Pending: $pending was not expected: $expectedPending", s"")
 					case _ => MatchResult(true, s"", s"Encoded should not have result in Success($expectedText,$expectedReferences), but did")
 			}
 		}

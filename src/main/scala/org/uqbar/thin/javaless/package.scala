@@ -8,9 +8,6 @@ import org.uqbar.utils.collections.immutable.IdentityMap
 
 package object javaless {
 
-	type EncoderResult = Try[(String, IdentityMap[Any, Range], List[Any])]
-	def EncoderResult(pending: Any*): EncoderResult = Try("", IdentityMap(), pending.toList)
-
 	val DefaultTerminals = Map(
 		'class -> "class",
 		'contextOpen -> "{",

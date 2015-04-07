@@ -8,47 +8,73 @@ import scala.reflect.runtime.universe.TypeTag
 import scala.reflect.runtime.universe
 
 trait Encoders {
-	implicit def StringToEncoder(s: String): Encoder[Any] = new Encoder(r => for ((_, references, pending) <- r) yield (s, references, pending))
+
+	implicit def StringToEncoder(s: String): Encoder[Any] = Constant(s)
 	implicit def EncoderToEncoder[U <: Product: TypeTag](e: Encoder[_]): Encoder[U] = e.^^[U]
+
+	def encode[T](encoder: Encoder[T])(target: T) = encoder(EncoderResult(target))
 
 	class Encoder[T <: Any: TypeTag](tx: EncoderResult => EncoderResult) extends (EncoderResult => EncoderResult) {
 		def apply(target: EncoderResult) = tx(target)
 
-		protected def canBeAppliedTo[X](o: Any)(implicit tt: TypeTag[X]) = universe.runtimeMirror(o.getClass.getClassLoader).reflect(o).symbol.toType <:< tt.tpe
+		def ~[U: TypeTag](other: Encoder[U]): Encoder[List[Any]] = Append(this, other)
 
-		def ~[U: TypeTag](other: Encoder[U]): Encoder[List[Any]] = new Encoder(r => for {
-			previous @ (previousText, previousReferences, previousPending) <- this(r)
-			(nextText, nextReferences, nextPending) <- other(Try("", previousReferences, previousPending))
-			shiftedNextReferences = nextReferences.map{ case (k, v) => k -> (v.start + previousText.size until v.end + previousText.size) }
-		} yield (previousText + nextText, shiftedNextReferences ++ previousReferences, nextPending)
-		)
-
-		def ^^[U <: Product: TypeTag](): Encoder[U] = this ^^ { u: U => u.productIterator.toList }
-		def ^^[U: TypeTag, R >: T](f: U => List[R]): Encoder[U] = new Encoder(r =>
-			for {
-				(previousText, previousReferences, p :: previousPending) <- r if canBeAppliedTo[U](p)
-				(nextText, nextReferences, nextPending) <- this(Try(previousText, previousReferences, f(p.asInstanceOf[U]) ::: previousPending))
-			} yield (nextText, nextReferences + (p, 0 until nextText.size), nextPending)
-		)
-
-		def |[U >: T: TypeTag, V <: U](other: Encoder[V]): Encoder[U] = new Encoder(r =>
-			this(r).orElse(other(r))
-		)
+		def |[U >: T: TypeTag, V <: U](other: Encoder[V]): Encoder[U] = Or(this, other)
 
 		def * = *~("")
 
-		def *~(separator: Encoder[_]): Encoder[List[T]] = new Encoder(_.flatMap {
-			case (_, references, (ps: List[_]) :: _) =>
-				val encoder = if (ps.isEmpty) { r: EncoderResult => r } else 1.until(ps.size).map{ _ => separator ~ this }.fold(this)(_ ~ _)
-				encoder(Try("", references, ps))
-			case (_, _, pending) => throw new RuntimeException(s"Stack top can't be extracted to list on $this")
-		})
+		def *~(separator: Encoder[_]): Encoder[List[T]] = RepSep(this, separator)
+
+		def ^^[U <: Product: TypeTag](): Encoder[U] = this ^^ { u: U => u.productIterator.toList }
+		def ^^[U: TypeTag, R >: T](f: U => List[R]): Encoder[U] = Extract[T, U, R](this)(f)
 	}
 
-	object __ extends Encoder[Any](_ flatMap {
-		case (text, references, p :: pending) => Try(p.toString, references, pending)
-		case (_, _, Nil) => throw new RuntimeException(s"Empty stack can't be extracted on $this")
-	})
+	//▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+	// ENCODERS
+	//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
-	def encode[T](encoder: Encoder[T])(target: T) = encoder(EncoderResult(target))
+	object __ extends Encoder[Any](target =>
+		for { (text, references, p :: pending) <- target } yield (p.toString, references, pending)
+	)
+
+	case class Constant(value: String) extends Encoder[Any](target =>
+		for { (_, references, pending) <- target } yield (value, references, pending)
+	)
+
+	case class Extract[T: TypeTag, U, R >: T](before: Encoder[T])(f: U => List[R])(implicit tt: TypeTag[U]) extends Encoder[U](target =>
+		for {
+			(previousText, previousReferences, p :: previousPending) <- target
+			if universe.runtimeMirror(p.getClass.getClassLoader).reflect(p).symbol.toType <:< tt.tpe
+			(nextText, nextReferences, nextPending) <- before(Try(previousText, previousReferences, f(p.asInstanceOf[U]) ::: previousPending))
+		} yield (nextText, nextReferences + (p, 0 until nextText.size), nextPending)
+	)
+
+	case class Or[T: TypeTag, U >: T: TypeTag, V <: U](some: Encoder[T], other: Encoder[V]) extends Encoder[U](target =>
+		some(target).orElse(other(target))
+	)
+
+	case class RepSep[T: TypeTag, S: TypeTag](body: Encoder[T], separator: Encoder[S]) extends Encoder[List[T]](target =>
+		for {
+			(_, references, (ps: List[_]) :: _) <- target
+			encoder = if (ps.isEmpty) { r: EncoderResult => r } else 1.until(ps.size).map{ _ => separator ~ body }.fold(body)(_ ~ _)
+			result <- encoder(Try("", references, ps))
+		} yield result
+	)
+
+	case class Append[L: TypeTag, R: TypeTag](left: Encoder[L], right: Encoder[R]) extends Encoder[List[Any]](target =>
+		for {
+			previous @ (previousText, previousReferences, previousPending) <- left(target)
+			(nextText, nextReferences, nextPending) <- right(Try("", previousReferences, previousPending))
+			shiftedNextReferences = nextReferences.map{ case (k, v) => k -> (v.start + previousText.size until v.end + previousText.size) }
+		} yield (previousText + nextText, shiftedNextReferences ++ previousReferences, nextPending)
+	)
+
+	//▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+	// CONFIGURATION
+	//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+	trait Location
+	case class Before(target: Encoder[Any]) extends Location
+	case class After(target: Encoder[Any]) extends Location
+	case class Between(left: Encoder[Any], right: Encoder[Any]) extends Location
 }

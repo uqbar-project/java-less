@@ -5,6 +5,7 @@ import scala.collection.JavaConversions._
 import java.util.IdentityHashMap
 import scala.util.Try
 import org.uqbar.utils.collections.immutable.IdentityMap
+import org.uqbar.thin.encoding.combinator.EncoderPreferences
 
 package object javaless {
 
@@ -17,7 +18,11 @@ package object javaless {
 		'argumentSeparator -> ",",
 		'public -> "public"
 	)
-
+	
+	val DefaultPreferences = new EncoderPreferences(
+		spacing = Map().withDefaultValue(false)
+	)
+	
 	type Identifier = String
 
 	implicit class ExtendedIdentityHashMap(inner: IdentityHashMap[Any, Range]) {

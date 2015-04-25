@@ -5,4 +5,5 @@ target
 .cache
 .README.md.html
 .worksheet
+.tmpBin
 *.sc

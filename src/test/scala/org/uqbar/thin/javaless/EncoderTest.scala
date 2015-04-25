@@ -13,6 +13,7 @@ import org.scalatest.matchers.Matcher
 class JavalessEncoderTest extends FreeSpec with EncoderTest[EncoderDefinition] with EncoderDefinition {
 
 	val terminals = DefaultTerminals
+	val preferences = DefaultPreferences
 
 		"Javaless encode of" - {
 	

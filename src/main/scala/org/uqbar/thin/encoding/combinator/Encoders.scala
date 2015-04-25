@@ -9,8 +9,12 @@ import scala.reflect.runtime.universe
 
 trait Encoders {
 
-	implicit def StringToEncoder(s: String): Encoder[Any] = Constant(s)
-	implicit def EncoderToEncoder[U <: Product: TypeTag](e: Encoder[_]): Encoder[U] = e.^^[U]
+	def preferences: EncoderPreferences
+	def terminals: Map[Symbol, String]
+
+	implicit protected def StringToEncoder(s: String): Encoder[Any] = Constant(s)
+	implicit protected def SymbolToEncoder(s: Symbol): Encoder[Any] = terminals(s)
+	implicit protected def EncoderToEncoder[U <: Product: TypeTag](e: Encoder[_]): Encoder[U] = e.^^[U]
 
 	def encode[T](encoder: Encoder[T])(target: T) = encoder(EncoderResult(target))
 
@@ -33,7 +37,7 @@ trait Encoders {
 	// ENCODERS
 	//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
-	object __ extends Encoder[Any](target =>
+	case object __ extends Encoder[Any](target =>
 		for { (text, references, p :: pending) <- target } yield (p.toString, references, pending)
 	)
 
@@ -69,12 +73,15 @@ trait Encoders {
 		} yield (previousText + nextText, shiftedNextReferences ++ previousReferences, nextPending)
 	)
 
-	//▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-	// CONFIGURATION
-	//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-
-	trait Location
-	case class Before(target: Encoder[Any]) extends Location
-	case class After(target: Encoder[Any]) extends Location
-	case class Between(left: Encoder[Any], right: Encoder[Any]) extends Location
 }
+
+//▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+// PREFERENCES
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
+class EncoderPreferences(spacing: Map[Location, Boolean])
+
+trait Location
+case class Before(target: Encoders#Encoder[Any]) extends Location
+case class After(target: Encoders#Encoder[Any]) extends Location
+case class Between(left: Encoders#Encoder[Any], right: Encoders#Encoder[Any]) extends Location

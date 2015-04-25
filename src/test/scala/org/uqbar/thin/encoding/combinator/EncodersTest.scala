@@ -17,6 +17,11 @@ case class Z(t: T)
 case class W(ts: List[T])
 
 trait EncoderExample extends Encoders {
+	val terminals = Map[Symbol,String]()
+	val preferences = new EncoderPreferences(
+			spacing = Map().withDefaultValue(false)
+	)
+	
 	lazy val foo: Encoder[Any] = "Foo"
 	lazy val xStripped: Encoder[X] = __
 	lazy val x: Encoder[X] = "X:" ~ __

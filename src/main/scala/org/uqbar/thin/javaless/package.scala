@@ -6,12 +6,16 @@ import java.util.IdentityHashMap
 import scala.util.Try
 import org.uqbar.utils.collections.immutable.IdentityMap
 import org.uqbar.thin.encoding.combinator.EncoderPreferences
+import org.uqbar.thin.encoding.combinator.Location
+import org.uqbar.thin.encoding.combinator.After
+import org.uqbar.thin.encoding.combinator.Constant
+import org.uqbar.thin.encoding.combinator.Before
 
 package object javaless {
 
 	val DefaultTerminals = Map(
 		'class -> "class",
-		'contextOpen -> "{",
+		'contextOpen -> "{", 
 		'contextClose -> "}",
 		'argumentOpen -> "(",
 		'argumentClose -> ")",
@@ -20,7 +24,11 @@ package object javaless {
 	)
 	
 	val DefaultPreferences = new EncoderPreferences(
-		spacing = Map().withDefaultValue(false)
+		spacing = Map[Location,Boolean](
+				After(new Constant(DefaultTerminals('class))) -> true,
+				After(new Constant(DefaultTerminals('public))) -> true,
+				Before(new Constant(DefaultTerminals('contextOpen))) -> true
+		).withDefaultValue(false)
 	)
 	
 	type Identifier = String

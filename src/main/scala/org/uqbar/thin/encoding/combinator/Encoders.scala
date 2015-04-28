@@ -92,4 +92,3 @@ class EncoderPreferences(val spacing: Map[Location, Boolean])
 trait Location
 case class Before(target: Encoder[Any]) extends Location
 case class After(target: Encoder[Any]) extends Location
-case class Between(left: Encoder[Any], right: Encoder[Any]) extends Location

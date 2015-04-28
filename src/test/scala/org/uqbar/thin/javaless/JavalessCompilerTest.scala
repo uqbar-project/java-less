@@ -11,7 +11,7 @@ import org.uqbar.voodoo.BytecodeClassLoader
 import java.io.File
 import org.scalatest.BeforeAndAfterAll
 
-class JavalessCompilerTest extends FreeSpec with Matchers  with BeforeAndAfterAll  with Compiler {
+class JavalessCompilerTest extends FreeSpec with Matchers  with BeforeAndAfterAll  with JavalessCompiler {
 
 	val TEMP_PATH = new File(s"${getClass.getProtectionDomain.getCodeSource.getLocation.getFile}GENERATED")
 	

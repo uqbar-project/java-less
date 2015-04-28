@@ -3,7 +3,7 @@ package org.uqbar.thin.javaless
 import org.scalatest.FreeSpec
 import org.uqbar.testing.ParserTest
 
-class JavalessParserTest extends FreeSpec with ParserTest[ParserDefinition] with ParserDefinition {
+class JavalessParserTest extends FreeSpec with ParserTest[JavalessParserDefinition] with JavalessParserDefinition {
 
   val terminals = DefaultTerminals
 

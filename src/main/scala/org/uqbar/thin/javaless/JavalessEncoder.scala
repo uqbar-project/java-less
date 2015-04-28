@@ -13,6 +13,6 @@ trait JavalessEncoderDefinition extends Encoders {
 	lazy val program: Encoder[Program] = classDefinition.*
 	lazy val classDefinition: Encoder[Class] = 'class ~ __ ~ 'contextOpen ~ classMember.* ~ 'contextClose
 	lazy val classMember = methodDefinition
-	lazy val methodDefinition: Encoder[Method] = 'public ~ __ ~ 'argumentOpen ~ argument.*~('argumentSeparator ~ " ") ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
-	lazy val argument: Encoder[Argument] = __ ~ " " ~ __
+	lazy val methodDefinition: Encoder[Method] = 'public ~ __ ~ 'argumentOpen ~ (argument *~ 'argumentSeparator) ~ 'argumentClose ~ 'contextOpen ~ 'contextClose
+	lazy val argument: Encoder[Argument] = __ ~ 'typeApplication ~ __
 }

@@ -20,13 +20,16 @@ package object javaless {
 		'argumentOpen -> "(",
 		'argumentClose -> ")",
 		'argumentSeparator -> ",",
-		'public -> "public"
+		'public -> "public",
+		'typeApplication -> ""
 	)
 	
 	val DefaultPreferences = new EncoderPreferences(
 		spacing = Map[Location,Boolean](
 				After(new Constant(DefaultTerminals('class))) -> true,
 				After(new Constant(DefaultTerminals('public))) -> true,
+				After(new Constant(DefaultTerminals('argumentSeparator))) -> true,
+				After(new Constant(DefaultTerminals('typeApplication))) -> true,
 				Before(new Constant(DefaultTerminals('contextOpen))) -> true
 		).withDefaultValue(false)
 	)

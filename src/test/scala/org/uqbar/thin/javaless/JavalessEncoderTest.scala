@@ -27,7 +27,10 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 						
 						val emptyMethod = Method("calculate", Nil, Nil)
 						val nonEmptyClass = Class("MyClass", List(emptyMethod))
-						nonEmptyClass should beEncodedTo("class MyClass {public calculate() {}}")(nonEmptyClass -> 0.until(37), emptyMethod -> 15.until(36))
+						nonEmptyClass should beEncodedTo(
+"""class MyClass {
+  public calculate() {}
+}""")(nonEmptyClass -> 0.until(41), emptyMethod -> 16.until(39))
 					}
 
 					"for a method" in {

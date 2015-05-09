@@ -39,7 +39,7 @@ abstract class Encoder[T <: Any: TypeTag] {
 	def ^^[U <: Product: TypeTag](): Encoder[U] = this ^^ { u: U => u.productIterator.toList }
 	def ^^[U: TypeTag, R >: T](f: U => List[R]): Encoder[U] = Extract[T, U, R](this)(f)
 	
-	protected def tabulation(preferences: EncoderPreferences, level: Int) = "  " * level
+	protected def tabulation(preferences: EncoderPreferences, level: Int) = "\t" * level
 }
 
 case object Id extends Encoder[Any] {

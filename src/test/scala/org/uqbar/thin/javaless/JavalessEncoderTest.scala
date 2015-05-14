@@ -9,6 +9,12 @@ import org.scalatest.Matchers
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 import scala.util.Failure
+import java.io.PrintStream
+import java.io.OutputStream
+import java.io.BufferedOutputStream
+import java.io.ByteArrayOutputStream
+import java.io.StringWriter
+import java.io.PrintWriter
 
 class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoderDefinition {
 
@@ -36,6 +42,19 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 							public calculate() {}
 						}
 					""")(nonEmptyClass -> 0.until(40), emptyMethod -> 16.until(38)) 
+				}
+
+				"with two method definitions" in {
+					val emptyMethod1 = Method("calculate", Nil, Nil)
+					val emptyMethod2 = Method("recalculate", Nil, Nil)
+					val nonEmptyClass = Class("MyClass", List(emptyMethod1, emptyMethod2))
+							
+					nonEmptyClass should beEncodedTo("""
+						class MyClass {
+							public calculate() {}
+							public recalculate() {}
+						}
+					""")(nonEmptyClass -> 0.until(65), emptyMethod1 -> 16.until(38), emptyMethod1 -> 40.until(64)) 
 				}
 
 				"for methods" - {
@@ -99,6 +118,7 @@ trait EncoderTest extends Matchers {
 					val unexpectedReferences = references.filterNot(expectedReferences isDefinedAt _._1)
 					val missedReferences = expectedReferences.filterNot(references isDefinedAt _._1)
 					val wrongReferences = references.
+						filterNot{ case (key, _) => unexpectedReferences.isDefinedAt(key) || missedReferences.isDefinedAt(key) }.
 						map{ case (key, value) => (key, (value.start, value.end), (expectedReferences(key).start, expectedReferences(key).end)) }.
 						filter{ case (key, value, expected) => value != expected }
 
@@ -106,7 +126,10 @@ trait EncoderTest extends Matchers {
 					else if (missedReferences.nonEmpty) (false, s"""Encoding didn't yield references to expected objects: ${missedReferences.keys.mkString("[", ", ", "]")}""")
 					else if (wrongReferences.nonEmpty) (false, s"""Encoding yielded wrong references: ${wrongReferences.map{ case (k, (vs, ve), (es, ee)) => s"$k: $vs to $ve != $es to $ee" }.mkString("[", ", ", "]")}""")
 					else (true, "Encoded was as expected")
-				case Failure(e) => (false, "Encoding failed because of $e")
+				case Failure(e) =>
+					val stack = new StringWriter
+					e.printStackTrace(new PrintWriter(stack))					
+					(false, s"Encoding failed because of $e: ${stack.toString}}")
 			}
 
 			MatchResult(success, message, message)

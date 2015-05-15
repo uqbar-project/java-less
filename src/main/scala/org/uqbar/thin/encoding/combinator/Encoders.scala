@@ -22,7 +22,7 @@ trait Encoders {
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
 abstract class Encoder[-T] {
-	def apply[U <: T](preferences: EncoderPreferences, level: Int = 0)(target: U): EncoderResult
+	def apply(preferences: EncoderPreferences, level: Int = 0)(target: T): EncoderResult
 
 	def apply[U](f: U => T): Encoder[U] = Tx(this)(f)
 
@@ -44,11 +44,11 @@ abstract class Encoder[-T] {
 }
 
 case object __ extends Encoder[Any] {
-	def apply[U](preferences: EncoderPreferences, level: Int)(target: U) = EncoderResult(tabulation(preferences, level) + target)
+	def apply(preferences: EncoderPreferences, level: Int)(target: Any) = EncoderResult(tabulation(preferences, level) + target)
 }
 
 case class Constant(value: String) extends Encoder[Any] {
-	def apply[U](preferences: EncoderPreferences, level: Int)(target: U) = {
+	def apply(preferences: EncoderPreferences, level: Int)(target: Any) = {
 		val beforeSpace = if (preferences.spacing(Before(Constant(value)))) " " else ""
 		val afterSpace = if (preferences.spacing(After(Constant(value)))) " " else ""
 
@@ -57,7 +57,7 @@ case class Constant(value: String) extends Encoder[Any] {
 }
 
 case class Append[-T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
-	def apply[U <: T](preferences: EncoderPreferences, level: Int)(target: U) = for {
+	def apply(preferences: EncoderPreferences, level: Int)(target: T) = for {
 		(previousText, previousReferences) <- left(preferences, 0)(target)
 		(nextText, nextReferences) <- right(preferences, 0)(target)
 		shiftedReferences: IdentityMap[Any, Range] = (nextReferences.shifted(previousText.size) ++ previousReferences)
@@ -66,14 +66,14 @@ case class Append[-T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
 }
 
 case class Tx[-T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
-	def apply[U <: T](preferences: EncoderPreferences, level: Int)(target: U) = for {
+	def apply(preferences: EncoderPreferences, level: Int)(target: T) = for {
 		(nextText, nextReferences) <- before(preferences, level)(f(target))
 		references: IdentityMap[Any, Range] = nextReferences + (f(target), 0 until nextText.size)
 	} yield (nextText, references)
 }
 
 case class Or[T, -L <: T, -R <: T](some: Encoder[L], other: Encoder[R]) extends Encoder[T] {
-	def apply[U <: T](preferences: EncoderPreferences, level: Int)(target: U) = {
+	def apply(preferences: EncoderPreferences, level: Int)(target: T) = {
 		val left = try some(preferences, level)(target.asInstanceOf[L]) catch { case e: Exception => Try{ throw e } }
 		val right = try other(preferences, level)(target.asInstanceOf[R]) catch { case e: Exception => Try{ throw e } }
 		left.orElse(right)
@@ -81,7 +81,7 @@ case class Or[T, -L <: T, -R <: T](some: Encoder[L], other: Encoder[R]) extends 
 }
 
 case class RepSep[-T](body: Encoder[T], separator: Encoder[Any]) extends Encoder[List[T]] {
-	def apply[U <: List[T]](preferences: EncoderPreferences, level: Int)(target: U) =
+	def apply(preferences: EncoderPreferences, level: Int)(target: List[T]) =
 		if (target.isEmpty) EncoderResult()
 		else (body(preferences, level)(target.head) /: target.tail){ (previous, elem) =>
 			for {
@@ -96,7 +96,7 @@ case class RepSep[-T](body: Encoder[T], separator: Encoder[Any]) extends Encoder
 }
 
 case class Subcontext[-T](body: Encoder[T]) extends Encoder[T] {
-	def apply[U <: T](preferences: EncoderPreferences, level: Int)(target: U) = for {
+	def apply(preferences: EncoderPreferences, level: Int)(target: T) = for {
 		(text, references) <- body(preferences, level + 1)(target)
 	} yield (if (text.trim.isEmpty) text else s"\n$text\n", references.shifted(1))
 }

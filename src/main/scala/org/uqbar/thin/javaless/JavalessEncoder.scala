@@ -10,10 +10,10 @@ class JavalessEncoder(_terminals: => Map[Symbol, String] = DefaultTerminals, _pr
 }
 
 trait JavalessEncoderDefinition extends Encoders {
-	lazy val program: Encoder[Program] = classDefinition.*
-	lazy val classDefinition: Encoder[Class] = 'class ~ __ ~ 'contextOpen ~~(classMember.*) ~ 'contextClose
-	lazy val classMember = methodDefinition
-	lazy val methodDefinition: Encoder[Method] = 'public ~ __ ~ arguments ~ 'contextOpen ~ 'contextClose
+	lazy val program: Encoder[Program] = classDefinition.*{(_:Program).definitions}
+	lazy val classDefinition: Encoder[Class] = 'class ~ __{(_:Class).name} ~ 'contextOpen ~~(classMember.*{(_:Class).body}) ~ 'contextClose
+	lazy val classMember: Encoder[ClassMember] = methodDefinition | ""
+	lazy val methodDefinition: Encoder[Method] = 'public ~ __{(_:Method).name} ~ arguments{(_:Method).arguments} ~ 'contextOpen ~ 'contextClose
 	lazy val arguments = 'argumentOpen ~ (argument *~ 'argumentSeparator) ~ 'argumentClose
-	lazy val argument: Encoder[Argument] = __ ~ 'typeApplication ~ __
+	lazy val argument: Encoder[Argument] = __{(_:Argument).atype} ~ 'typeApplication ~ __{(_:Argument).name}
 }

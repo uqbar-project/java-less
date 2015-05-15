@@ -1,20 +1,20 @@
 package org.uqbar.thin.javaless
 
+import java.io.PrintWriter
+import java.io.StringWriter
+
+import scala.annotation.migration
 import scala.language.implicitConversions
-import scala.reflect.runtime.universe
+import scala.util.Failure
 import scala.util.Success
-import org.uqbar.thin.encoding.combinator._
+
 import org.scalatest.FreeSpec
 import org.scalatest.Matchers
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
-import scala.util.Failure
-import java.io.PrintStream
-import java.io.OutputStream
-import java.io.BufferedOutputStream
-import java.io.ByteArrayOutputStream
-import java.io.StringWriter
-import java.io.PrintWriter
+import org.uqbar.thin.encoding.combinator.Encoder
+import org.uqbar.thin.encoding.combinator.EncoderPreferences
+import org.uqbar.thin.encoding.combinator.T
 
 class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoderDefinition {
 
@@ -30,7 +30,7 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 				"with no members" in {
 					val emptyClass = Class("MyClass", Nil)
 
-					emptyClass should beEncodedTo("class MyClass {}")(emptyClass -> 0.until(16))
+					emptyClass should beEncodedTo("class MyClass {}")(emptyClass -> 0.until(16), "MyClass" -> 6.until(13), Nil -> 16.until(16))
 				}
 
 				"with a method definition" in {
@@ -111,10 +111,10 @@ trait EncoderTest extends Matchers {
 		val expectedReferences = expectedReferencesSeq.toMap
 
 		def apply(target: T) = {
-			val result = encoder(preferences)(if (target.isInstanceOf[List[_]]) EncoderResult(target.asInstanceOf[List[_]]: _*) else EncoderResult(target))
+			val result = encoder(preferences)(target)
 			val (success, message) = result match {
-				case Success((text, _, _)) if text != expectedText => (false, s"""Encoded text: "$text" did not match expected text: "$expectedText"""")
-				case Success((_, references, _)) =>
+				case Success((text, _)) if text != expectedText => (false, s"""Encoded text: "$text" did not match expected text: "$expectedText"""")
+				case Success((_, references)) =>
 					val unexpectedReferences = references.filterNot(expectedReferences isDefinedAt _._1)
 					val missedReferences = expectedReferences.filterNot(references isDefinedAt _._1)
 					val wrongReferences = references.
@@ -124,7 +124,7 @@ trait EncoderTest extends Matchers {
 
 					if (unexpectedReferences.nonEmpty) (false, s"""Encoding yielded references to unexpected objects: ${unexpectedReferences.keys.mkString("[", ", ", "]")}""")
 					else if (missedReferences.nonEmpty) (false, s"""Encoding didn't yield references to expected objects: ${missedReferences.keys.mkString("[", ", ", "]")}""")
-					else if (wrongReferences.nonEmpty) (false, s"""Encoding yielded wrong references: ${wrongReferences.map{ case (k, (vs, ve), (es, ee)) => s"$k: $vs to $ve != $es to $ee" }.mkString("[", ", ", "]")}""")
+					else if (wrongReferences.nonEmpty) (false, s"""Encoding yielded wrong references: ${wrongReferences.map{ case (k, (vs, ve), (es, ee)) => s"$k: $vs to $ve wasn't $es to $ee" }.mkString("[", ", ", "]")}""")
 					else (true, "Encoded was as expected")
 				case Failure(e) =>
 					val stack = new StringWriter
@@ -136,9 +136,9 @@ trait EncoderTest extends Matchers {
 		}
 	}
 
-	case class beEncoded(implicit encoder: Encoder[_], preferences: EncoderPreferences) extends Matcher[T] {
+	case class beEncoded(implicit encoder: Encoder[T], preferences: EncoderPreferences) extends Matcher[T] {
 		def apply(target: T) = {
-			val result = encoder(preferences)(EncoderResult(target))
+			val result = encoder(preferences)(target)
 
 			MatchResult(
 				result.isSuccess,

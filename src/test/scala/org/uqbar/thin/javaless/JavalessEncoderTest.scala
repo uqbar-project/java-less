@@ -30,7 +30,7 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 				"with no members" in {
 					val emptyClass = Class("MyClass", Nil)
 
-					emptyClass should beEncodedTo("class MyClass {}")(emptyClass -> 0.until(16), "MyClass" -> 6.until(13), Nil -> 16.until(16))
+					emptyClass should beEncodedTo("class MyClass {}")(emptyClass.name -> 6.until(13), emptyClass.body -> 15.until(15))
 				}
 
 				"with a method definition" in {
@@ -41,7 +41,7 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 						class MyClass {
 							public calculate() {}
 						}
-					""")(nonEmptyClass -> 0.until(40), emptyMethod -> 16.until(38)) 
+					""")(nonEmptyClass.name -> 6.until(13), nonEmptyClass.body -> 16.until(38), emptyMethod -> 16.until(38), emptyMethod.name -> 24.until(33), Nil-> 33.until(35)) 
 				}
 
 				"with two method definitions" in {
@@ -63,14 +63,14 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 					"with no arguments or body" in {
 						val argumentlessEmptyMethod = Method("calculate", Nil, Nil)
 
-						argumentlessEmptyMethod should beEncodedTo("public calculate() {}")(argumentlessEmptyMethod -> 0.until(21))
+						argumentlessEmptyMethod should beEncodedTo("public calculate() {}")(argumentlessEmptyMethod.name -> 7.until(16), argumentlessEmptyMethod.arguments -> 16.until(18))
 					}
 
 					"with one argument but no body" in {
 						val arg = Argument("void", "arg")
 						val argumentedEmptyMethod = Method("calculate", arg :: Nil, Nil)
 
-						argumentedEmptyMethod should beEncodedTo("public calculate(void arg) {}")(argumentedEmptyMethod -> 0.until(29), arg -> 17.until(25))
+						argumentedEmptyMethod should beEncodedTo("public calculate(void arg) {}")(argumentedEmptyMethod.name -> 7.until(16), argumentedEmptyMethod.arguments -> 16.until(26), arg -> 17.until(25), arg.name -> 22.until(25), arg.atype -> 17.until(21))
 					}
 
 					"with arguments but no body" in {
@@ -78,7 +78,7 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 						val arg2 = Argument("void", "arg2")
 						val argumentedEmptyMethod = Method("calculate", arg1 :: arg2 :: Nil, Nil)
 
-						argumentedEmptyMethod should beEncodedTo("public calculate(void arg1, void arg2) {}")(argumentedEmptyMethod -> 0.until(41), arg1 -> 17.until(26), arg2 -> 28.until(37))
+						argumentedEmptyMethod should beEncodedTo("public calculate(void arg1, void arg2) {}")(argumentedEmptyMethod.name -> 7.until(16), argumentedEmptyMethod.arguments -> 16.until(38), arg1 -> 17.until(26), arg1.name -> 22.until(26), arg1.atype -> 17.until(21), arg2 -> 28.until(37), arg2.name -> 33.until(37), arg2.atype -> 17.until(21))
 					}
 
 				}

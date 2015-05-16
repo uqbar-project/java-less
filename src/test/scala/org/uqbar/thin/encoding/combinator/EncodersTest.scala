@@ -67,7 +67,7 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 			}
 
 			"should have syntactic sugar to be crated from target encoders" in {
-				__{ x: Any => x.toString } should be (Tx(__){ x: Any => x.toString })
+				__{ x: Any => x.toString } should be (Transform(__){ x: Any => x.toString })
 			}
 		}
 
@@ -98,11 +98,11 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 			}
 
 			"if target list has only one element, output should be the output of target encoder, applied to that element, with no separator" in {
-				encoder encodingOf (List(1)) should resultIn("1")()
+				encoder encodingOf (List(1)) should resultIn("1")(1 -> 0.until(1))
 			}
 
 			"if target list has more than one element, output should be the output of target encoder, applied to each element, separated by the output of the separator encoder" in {
-				encoder encodingOf (List(1, 2, 3)) should resultIn("1|2|3")()
+				encoder encodingOf (List(1, 2, 3)) should resultIn("1|2|3")(1 -> 0.until(1),2 -> 2.until(3),3 -> 4.until(5))
 			}
 
 			"should have syntactic sugar to be crated from target encoders" in {

@@ -1,11 +1,7 @@
 package org.uqbar.thin.encoding.combinator
 
-import scala.language.dynamics
-import scala.language.existentials
 import scala.language.implicitConversions
 import scala.util.Try
-
-import org.uqbar.utils.collections.immutable.IdentityMap
 
 trait Encoders {
 	def preferences: EncoderPreferences
@@ -14,7 +10,7 @@ trait Encoders {
 	implicit protected def StringToEncoder(s: String): Encoder[Any] = Constant(s)
 	implicit protected def SymbolToEncoder(s: Symbol): Encoder[Any] = Constant(terminals(s))
 
-	def encode[T](encoder: Encoder[T])(target: T) = encoder(preferences)(target)
+	def encode[T](encoder: Encoder[T])(target: T) = encoder(preferences)(target).map(_ referencing target)
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
@@ -24,7 +20,7 @@ trait Encoders {
 abstract class Encoder[-T] {
 	def apply(preferences: EncoderPreferences, level: Int = 0)(target: T): EncoderResult
 
-	def apply[U](f: U => T): Encoder[U] = Tx(this)(f)
+	def apply[U](f: U => T): Encoder[U] = Transform(this)(f)
 
 	def ~[U <: T](other: Encoder[U]): Encoder[U] = Append(this, other)
 
@@ -37,10 +33,6 @@ abstract class Encoder[-T] {
 	def *~(separator: Encoder[Any]): Encoder[List[T]] = RepSep(this, separator)
 
 	protected def tabulation(preferences: EncoderPreferences, level: Int) = "\t" * level
-
-	protected implicit class ExtendedIdentityMap(m: IdentityMap[Any, Range]) {
-		def shifted(n: Int): IdentityMap[Any, Range] = m.map{ case (k, v) => k -> (v.start + n until v.end + n) }
-	}
 }
 
 case object __ extends Encoder[Any] {
@@ -58,18 +50,17 @@ case class Constant(value: String) extends Encoder[Any] {
 
 case class Append[-T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
 	def apply(preferences: EncoderPreferences, level: Int)(target: T) = for {
-		(previousText, previousReferences) <- left(preferences, 0)(target)
-		(nextText, nextReferences) <- right(preferences, 0)(target)
-		shiftedReferences: IdentityMap[Any, Range] = (nextReferences.shifted(previousText.size) ++ previousReferences)
-		tabs = tabulation(preferences, level)
-	} yield (tabs + previousText + nextText, shiftedReferences.shifted(tabs.size))
+		tabs <- EncoderResult(tabulation(preferences, level))
+		previous <- left(preferences, 0)(target)
+		next <- right(preferences, 0)(target)
+	} yield tabs ++ previous ++ next
 }
 
-case class Tx[-T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
-	def apply(preferences: EncoderPreferences, level: Int)(target: T) = for {
-		(nextText, nextReferences) <- before(preferences, level)(f(target))
-		references: IdentityMap[Any, Range] = nextReferences + (f(target), 0 until nextText.size)
-	} yield (nextText, references)
+case class Transform[-T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
+	def apply(preferences: EncoderPreferences, level: Int)(target: T) = {
+		val transformedTarget = f(target)
+		for { next <- before(preferences, level)(transformedTarget) } yield next.referencing(transformedTarget)
+	}
 }
 
 case class Or[T, -L <: T, -R <: T](some: Encoder[L], other: Encoder[R]) extends Encoder[T] {
@@ -83,22 +74,21 @@ case class Or[T, -L <: T, -R <: T](some: Encoder[L], other: Encoder[R]) extends 
 case class RepSep[-T](body: Encoder[T], separator: Encoder[Any]) extends Encoder[List[T]] {
 	def apply(preferences: EncoderPreferences, level: Int)(target: List[T]) =
 		if (target.isEmpty) EncoderResult()
-		else (body(preferences, level)(target.head) /: target.tail){ (previous, elem) =>
+		else (body(preferences, level)(target.head).map{_ referencing target.head} /: target.tail){ (previous, elem) =>
 			for {
-				(previousText, previousReferences) <- previous
-				(separatorText, separatorReferences) <- separator(preferences, level)(())
-				(bodyText, bodyReferences) <- body(preferences, level)(elem)
-				tabs = tabulation(preferences, level)
-				elemReferences: IdentityMap[Any, Range] = bodyReferences.shifted(previousText.size + separatorText.size) ++ separatorReferences.shifted(previousText.size)
-				nextReferences: IdentityMap[Any, Range] = elemReferences ++ previousReferences
-			} yield (previousText + separatorText + bodyText, nextReferences)
+				tabs <- EncoderResult(tabulation(preferences, level))
+				previous <- previous
+				separator <- separator(preferences, level)(())
+				body <- body(preferences, level)(elem)
+			} yield tabs ++ previous ++ separator ++ body.referencing(elem)
 		}
 }
 
 case class Subcontext[-T](body: Encoder[T]) extends Encoder[T] {
 	def apply(preferences: EncoderPreferences, level: Int)(target: T) = for {
-		(text, references) <- body(preferences, level + 1)(target)
-	} yield (if (text.trim.isEmpty) text else s"\n$text\n", references.shifted(1))
+		br <- EncoderResult("\n")
+		body <- body(preferences, level + 1)(target)
+	} yield if (body._1.isEmpty) body else br ++ body ++ br
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀

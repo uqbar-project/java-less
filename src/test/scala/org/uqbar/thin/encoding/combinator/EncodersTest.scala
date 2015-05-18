@@ -3,7 +3,6 @@ package org.uqbar.thin.encoding.combinator
 import java.io.PrintWriter
 import java.io.StringWriter
 
-import scala.annotation.migration
 import scala.language.implicitConversions
 import scala.util.Failure
 import scala.util.Success
@@ -13,26 +12,24 @@ import org.scalatest.Matchers
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 
-trait EncoderExample extends Encoders {
-	val terminals = Map[Symbol, String]()
-	implicit val preferences = new EncoderPreferences(
-		spacing = Map().withDefaultValue(false)
-	)
-}
-
 trait T
 case class X(s: String) extends T
 case class Y(s: String, n: Int) extends T
 
-class EncodersTest extends FreeSpec with Matchers with EncoderExample {
+class EncodersTest extends FreeSpec with Matchers with Encoders {
+
+	val terminals = Map[Symbol, String]()
+	implicit val preferences = new EncoderPreferences(
+		spacing = Map().withDefaultValue(false)
+	)
 
 	"Encoder" - {
 
 		"Access" - {
 			"output text should be the encoded object toString" in {
-				__ encodingOf (1) should resultIn("1")()
-				__ encodingOf ("Foo") should resultIn("Foo")()
-				__ encodingOf (Some('c')) should resultIn("Some(c)")()
+				& encodingOf (1) should resultIn("1")()
+				& encodingOf ("Foo") should resultIn("Foo")()
+				& encodingOf (Some('c')) should resultIn("Some(c)")()
 			}
 		}
 
@@ -46,15 +43,15 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 			}
 		}
 
-		"Append" - { 
+		"Append" - {
 			"output text should be the result of appending the output of the given encoders" in {
 				"Foo" ~ "Bar" encodingOf (null) should resultIn("FooBar")()
 				"Foo" ~ "Bar" ~ "Meh" encodingOf (null) should resultIn("FooBarMeh")()
-				"Foo" ~ __ ~ "Bar" encodingOf (5) should resultIn("Foo5Bar")()
+				"Foo" ~ & ~ "Bar" encodingOf (5) should resultIn("Foo5Bar")()
 			}
 			
 			"should have syntactic sugar to be crated from target encoders" in {
-				"Foo" ~ __ ~ "Bar" should be (Append(Append(Constant("Foo"), __), Constant("Bar")))
+				"Foo" ~ & ~ "Bar" should be (Append(Append(Constant("Foo"), &), Constant("Bar")))
 			}
 		}
 
@@ -62,19 +59,19 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 			"given a transform function, the output should be the output of the given encoder, applied to the target transformed by that function" in {
 				val target = Some(58)
 
-				__{ e: Option[Any] => e.get } encodingOf (target) should resultIn("58")(58 -> 0.until(2))
-				("X:" ~ __ : Encoder[Any]){ e: Option[Any] => e.get } encodingOf (target) should resultIn("X:58")(58 -> 0.until(4))
+				&{ e: Option[Any] => e.get } encodingOf (target) should resultIn("58")(58 -> 0.until(2))
+				("X:" ~ & : Encoder[Any]){ e: Option[Any] => e.get } encodingOf (target) should resultIn("X:58")(58 -> 0.until(4))
 			}
 
 			"should have syntactic sugar to be crated from target encoders" in {
-				__{ x: Any => x.toString } should be (Transform(__){ x: Any => x.toString })
+				&{ x: Any => x.toString } should be (Transform(&){ x: Any => x.toString })
 			}
 		}
 
 		"Or" - {  
 			"output should be the output of the left encoder or, if it fails, the output of the right one" in {
-				val x: Encoder[X] = "X:" ~ __{ x: X => x.s }
-				val y: Encoder[Y] = "Y:" ~ __{y: Y => y.s} ~ ":" ~ __{y: Y => y.n}
+				val x: Encoder[X] = "X:" ~ &{ x: X => x.s }
+				val y: Encoder[Y] = "Y:" ~ &{y: Y => y.s} ~ ":" ~ &{y: Y => y.n}
 
 				val targetX = X("foo") 
 				val targetY = Y("bar", 5)
@@ -91,7 +88,7 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 		}
 
 		"RepSep" - {
-			val encoder = __.*~("|")
+			val encoder = &.*~("|")
 
 			"if target list is empty, output should be the empty" in {
 				encoder encodingOf (Nil) should resultIn("")()
@@ -106,11 +103,11 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 			}
 
 			"should have syntactic sugar to be crated from target encoders" in {
-				encoder should be (RepSep(__, Constant("|")))
+				encoder should be (RepSep(&, Constant("|")))
 			}
 
 			"should have syntactic sugar for no separator repetition, to be crated from target encoders" in {
-				__.* should be (RepSep(__, Constant("")))
+				&.* should be (RepSep(&, Constant("")))
 			}
 		}
 
@@ -120,11 +117,11 @@ class EncodersTest extends FreeSpec with Matchers with EncoderExample {
 			}
 
 			"should be nestable" in {
-				"class C {" ~~ ("method M {" ~~ (__.*) ~ "}") ~ "}" encodingOf (List("Line 1", "Line 2", "Line 3")) should resultIn("class C {\n\tmethod M {\n\t\tLine 1\n\t\tLine 2\n\t\tLine 3\n\t}\n}")()
+				"class C {" ~~ ("method M {" ~~ (&.*) ~ "}") ~ "}" encodingOf (List("Line 1", "Line 2", "Line 3")) should resultIn("class C {\n\tmethod M {\n\t\tLine 1\n\t\tLine 2\n\t\tLine 3\n\t}\n}")()
 			}
 
 			"should have syntactic sugar  to be crated from target encoders" in {
-				"Foo" ~~ (__) ~ "Bar" should be (Append(Append(Constant("Foo"), Subcontext(__)), Constant("Bar")))
+				"Foo" ~~ (&) ~ "Bar" should be (Append(Append(Constant("Foo"), Subcontext(&)), Constant("Bar")))
 			}
 		}
 	}

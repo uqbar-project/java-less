@@ -10,6 +10,21 @@ trait Encoders {
 	implicit protected def StringToEncoder(s: String): Encoder[Any] = Constant(s)
 	implicit protected def SymbolToEncoder(s: Symbol): Encoder[Any] = Constant(terminals(s))
 
+	protected sealed abstract class Appendable[T, U <% Encoder[T]] {
+		def left: U
+		def ~(right: Encoder[T]): Encoder[T] = Append(left, right)
+		def ~~(right: Encoder[T]): Encoder[T] = Append(left, Subcontext(right))
+	}
+	
+	implicit protected class ExtEncoder[T](val left: Encoder[T]) extends Appendable[T, Encoder[T]]
+	implicit protected class ExtString[T](val left: String) extends Appendable[T, String]
+	implicit protected class ExtSymbol[T](val left: Symbol) extends Appendable[T, Symbol]
+	
+	protected def $[T] = new Binder[T]
+	protected class Binder[T] {
+		def ~>(right: Encoder[T]): Encoder[T] = right
+	}
+
 	def encode[T](encoder: Encoder[T])(target: T) = encoder(preferences)(target).map(_ referencing target)
 }
 
@@ -22,10 +37,6 @@ abstract class Encoder[-T] {
 
 	def apply[U](f: U => T): Encoder[U] = Transform(this)(f)
 
-	def ~[U <: T](other: Encoder[U]): Encoder[U] = Append(this, other)
-
-	def ~~[U <: T](other: Encoder[U]): Encoder[U] = Append(this, Subcontext(other))
-
 	def |[V <: T, U >: V, R <: U](other: Encoder[R]): Encoder[U] = Or(this, other)
 
 	def * = *~(Constant(""))
@@ -35,7 +46,7 @@ abstract class Encoder[-T] {
 	protected def tabulation(preferences: EncoderPreferences, level: Int) = "\t" * level
 }
 
-case object __ extends Encoder[Any] {
+case object & extends Encoder[Any] {
 	def apply(preferences: EncoderPreferences, level: Int)(target: Any) = EncoderResult(tabulation(preferences, level) + target)
 }
 
@@ -48,7 +59,7 @@ case class Constant(value: String) extends Encoder[Any] {
 	}
 }
 
-case class Append[-T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
+case class Append[T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
 	def apply(preferences: EncoderPreferences, level: Int)(target: T) = for {
 		tabs <- EncoderResult(tabulation(preferences, level))
 		previous <- left(preferences, 0)(target)
@@ -56,7 +67,7 @@ case class Append[-T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
 	} yield tabs ++ previous ++ next
 }
 
-case class Transform[-T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
+case class Transform[T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
 	def apply(preferences: EncoderPreferences, level: Int)(target: T) = {
 		val transformedTarget = f(target)
 		for { next <- before(preferences, level)(transformedTarget) } yield next.referencing(transformedTarget)
@@ -74,7 +85,7 @@ case class Or[T, -L <: T, -R <: T](some: Encoder[L], other: Encoder[R]) extends 
 case class RepSep[-T](body: Encoder[T], separator: Encoder[Any]) extends Encoder[List[T]] {
 	def apply(preferences: EncoderPreferences, level: Int)(target: List[T]) =
 		if (target.isEmpty) EncoderResult()
-		else (body(preferences, level)(target.head).map{_ referencing target.head} /: target.tail){ (previous, elem) =>
+		else (body(preferences, level)(target.head).map{ _ referencing target.head } /: target.tail){ (previous, elem) =>
 			for {
 				tabs <- EncoderResult(tabulation(preferences, level))
 				previous <- previous

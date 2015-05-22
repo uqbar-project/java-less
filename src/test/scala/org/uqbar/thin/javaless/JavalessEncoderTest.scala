@@ -111,7 +111,7 @@ trait EncoderTest extends Matchers {
 		val expectedReferences = expectedReferencesSeq.toMap
 
 		def apply(target: T) = {
-			val result = encoder(preferences)(target)
+			val result = encoder.encode(preferences)(target)
 			val (success, message) = result match {
 				case Success((text, _)) if text != expectedText => (false, s"""Encoded text: "$text" did not match expected text: "$expectedText"""")
 				case Success((_, references)) =>
@@ -138,7 +138,7 @@ trait EncoderTest extends Matchers {
 
 	case class beEncoded(implicit encoder: Encoder[T], preferences: EncoderPreferences) extends Matcher[T] {
 		def apply(target: T) = {
-			val result = encoder(preferences)(target)
+			val result = encoder.encode(preferences)(target)
 
 			MatchResult(
 				result.isSuccess,

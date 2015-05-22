@@ -159,6 +159,6 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
 	}
 
 	protected implicit class TestedEncoder[T](encoder: Encoder[T]) {
-		def encodingOf(target: T)(implicit preferences: EncoderPreferences) = encoder.encode(preferences)(target)
+		def encodingOf(target: T)(implicit preferences: EncoderPreferences) = encoder.encode(target)(preferences)
 	}
 }

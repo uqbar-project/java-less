@@ -37,64 +37,64 @@ trait Encoders {
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
 abstract class Encoder[-T] {
-	def encode(target: T, level: Int = 0)(preferences: EncoderPreferences): EncoderResult
+	def encode(target: T, level: Int = 0)(implicit preferences: EncoderPreferences): EncoderResult
 
-	protected def tabulation(preferences: EncoderPreferences, level: Int) = "\t" * level
+	protected def tabulation(level: Int)(implicit preferences: EncoderPreferences) = "\t" * level
 }
 
 case object & extends Encoder[Any] {
-	def encode(target: Any, level: Int)(preferences: EncoderPreferences) = EncoderResult(tabulation(preferences, level) + target)
+	def encode(target: Any, level: Int)(implicit preferences: EncoderPreferences) = EncoderResult(tabulation(level) + target)
 }
 
 case class Constant(value: String) extends Encoder[Any] {
-	def encode(target: Any, level: Int)(preferences: EncoderPreferences) = {
+	def encode(target: Any, level: Int)(implicit preferences: EncoderPreferences) = {
 		val beforeSpace = if (preferences.spacing(Before(Constant(value)))) " " else ""
 		val afterSpace = if (preferences.spacing(After(Constant(value)))) " " else ""
 
-		EncoderResult(tabulation(preferences, level) + beforeSpace + value + afterSpace)
+		EncoderResult(tabulation(level) + beforeSpace + value + afterSpace)
 	}
 }
 
 case class Append[T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
-	def encode(target: T, level: Int)(preferences: EncoderPreferences) = for {
-		tabs <- EncoderResult(tabulation(preferences, level))
-		previous <- left.encode(target)(preferences)
-		next <- right.encode(target)(preferences)
+	def encode(target: T, level: Int)(implicit preferences: EncoderPreferences) = for {
+		tabs <- EncoderResult(tabulation(level))
+		previous <- left.encode(target)
+		next <- right.encode(target)
 	} yield tabs ++ previous ++ next
 }
 
 case class Transform[T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
-	def encode(target: T, level: Int)(preferences: EncoderPreferences) = {
+	def encode(target: T, level: Int)(implicit preferences: EncoderPreferences) = {
 		val transformedTarget = f(target)
-		for { next <- before.encode(transformedTarget,level)(preferences) } yield next.referencing(transformedTarget)
+		for { next <- before.encode(transformedTarget,level) } yield next.referencing(transformedTarget)
 	}
 }
 
 case class Or[T, -L <: T, -R <: T](some: Encoder[L], other: Encoder[R]) extends Encoder[T] {
-	def encode(target: T, level: Int)(preferences: EncoderPreferences) = {
-		val left = try some.encode(target.asInstanceOf[L],level)(preferences) catch { case e: Exception => Try{ throw e } }
-		val right = try other.encode(target.asInstanceOf[R],level)(preferences) catch { case e: Exception => Try{ throw e } }
+	def encode(target: T, level: Int)(implicit preferences: EncoderPreferences) = {
+		val left = try some.encode(target.asInstanceOf[L],level) catch { case e: Exception => Try{ throw e } }
+		val right = try other.encode(target.asInstanceOf[R],level) catch { case e: Exception => Try{ throw e } }
 		left.orElse(right)
 	}
 }
 
 case class RepSep[-T](body: Encoder[T], separator: Encoder[Any]) extends Encoder[List[T]] {
-	def encode(target: List[T], level: Int)(preferences: EncoderPreferences) =
+	def encode(target: List[T], level: Int)(implicit preferences: EncoderPreferences) =
 		if (target.isEmpty) EncoderResult()
-		else (body.encode(target.head,level)(preferences).map{ _ referencing target.head } /: target.tail){ (previous, elem) =>
+		else (body.encode(target.head,level).map{ _ referencing target.head } /: target.tail){ (previous, elem) =>
 			for {
-				tabs <- EncoderResult(tabulation(preferences, level))
+				tabs <- EncoderResult(tabulation(level))
 				previous <- previous
-				separator <- separator.encode((), level)(preferences)
-				body <- body.encode(elem, level)(preferences)
+				separator <- separator.encode((), level)
+				body <- body.encode(elem, level)
 			} yield tabs ++ previous ++ separator ++ body.referencing(elem)
 		}
 }
 
 case class Subcontext[-T](body: Encoder[T]) extends Encoder[T] {
-	def encode(target: T, level: Int)(preferences: EncoderPreferences) = for {
+	def encode(target: T, level: Int)(implicit preferences: EncoderPreferences) = for {
 		br <- EncoderResult("\n")
-		body <- body.encode(target, level + 1)(preferences)
+		body <- body.encode(target, level + 1)
 	} yield if (body._1.isEmpty) body else br ++ body ++ br
 }
 

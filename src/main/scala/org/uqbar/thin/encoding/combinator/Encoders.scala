@@ -16,11 +16,12 @@ trait Encoders {
 
 	protected abstract class EncoderSyntaxSugar[T, U <% Encoder[T]] {
 		def left: U
+		def |[V <: T, U >: V, R <: U](right: Encoder[R]): Encoder[U] = Or(left,right)
 		def ~(right: Encoder[T]): Encoder[T] = Append(left, right)
 		def ~~(right: Encoder[T]): Encoder[T] = Append(left, Subcontext(right))
-		def |[V <: T, U >: V, R <: U](right: Encoder[R]): Encoder[U] = Or(left,right)
+		def * : Encoder[List[T]] = RepSep(left,Constant(""))
 		def *~(separator: Encoder[Any]): Encoder[List[T]] = RepSep(left, separator)
-		def * = RepSep(left,Constant(""))
+		def *~~ : Encoder[List[T]] = RepSep(Subcontext(left), Constant(""))
 		def apply[U](f: U => T): Encoder[U] = Transform(left)(f)
 	}
 	

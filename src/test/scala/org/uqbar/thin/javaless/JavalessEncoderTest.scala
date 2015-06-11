@@ -24,6 +24,7 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 	"Javaless encoding" - {
 
 		"should succeed" - {
+			
 			"for classes" - {
 				implicit val encoder = classDefinition
 
@@ -52,6 +53,7 @@ class JavalessEncoderTest extends FreeSpec with EncoderTest with JavalessEncoder
 					nonEmptyClass should beEncodedTo("""
 						class MyClass {
 							public calculate() {}
+
 							public recalculate() {}
 						}
 					""")(nonEmptyClass -> 0.until(65), emptyMethod1 -> 16.until(38), emptyMethod1 -> 40.until(64)) 
@@ -104,10 +106,12 @@ trait EncoderTest extends Matchers {
 			map(s => if (s.startsWith(unwantedTabulation)) s.replaceFirst(unwantedTabulation, "") else s).
 			toList
 
-		val expectedText = expectedTextParts.filterNot{ part =>
-			(part == expectedTextParts.head && part.isEmpty) || (part != expectedTextParts.head && part == expectedTextParts.last && part.filterNot{ c => c == ' ' || c == '\t' }.isEmpty)
-		}.mkString("\n") 
-
+			
+		val expectedText = expectedTextParts.zipWithIndex.filterNot{
+			case ("", 0) => true
+			case (part, n) => n == expectedTextParts.size - 1 && part.forall{ " \t" contains _ }
+		}.map(_._1).mkString("\n")
+		
 		val expectedReferences = expectedReferencesSeq.toMap
 
 		def apply(target: T) = {

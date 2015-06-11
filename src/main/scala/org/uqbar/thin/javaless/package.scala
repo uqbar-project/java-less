@@ -24,16 +24,6 @@ package object javaless {
 		'typeApplication -> ""
 	)
 	
-	val DefaultPreferences = new EncoderPreferences(
-		spacing = Map[Location,Boolean](
-				After(new Constant(DefaultTerminals('class))) -> true,
-				After(new Constant(DefaultTerminals('public))) -> true,
-				After(new Constant(DefaultTerminals('argumentSeparator))) -> true,
-				After(new Constant(DefaultTerminals('typeApplication))) -> true,
-				Before(new Constant(DefaultTerminals('contextOpen))) -> true
-		).withDefaultValue(false)
-	)
-	
 	type Identifier = String
 
 	implicit class ExtendedIdentityHashMap(inner: IdentityHashMap[Any, Range]) {

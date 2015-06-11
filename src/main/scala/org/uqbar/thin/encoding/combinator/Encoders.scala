@@ -1,6 +1,7 @@
 package org.uqbar.thin.encoding.combinator
 
 import scala.language.implicitConversions
+import scala.language.existentials
 import scala.util.Try
 
 trait Encoders {
@@ -100,23 +101,22 @@ case class RepSep[-T](body: Encoder[T], separator: Encoder[Any]) extends Encoder
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
 class EncoderPreferences(
-	spacing: Set[Location[_]],
+	spacing: Set[Location],
 	tabulationSequence: String,
 	tabulationSize: Int,
-	lineBreaks: Map[Location[_], Int],
-	val tabulationLevelIncrements: Map[Location[_], Int]) {
-	def space[T](location: Location[T], target: T) = spacing.collectFirst{ case l: Location[T] if l.matches(location, target) => " " } getOrElse ""
-	def lineBreak[T](location: Location[T], target: T) = "\n" * lineBreaks.collect{ case (l: Location[T], count) if l.matches(location, target) => count }.sum
+	lineBreaks: Map[Location, Int],
+	val tabulationLevelIncrements: Map[Location, Int]) {
+	def space[T](location: Location, target: T) = spacing.collectFirst{ case l: Location if l.matches(location, target) => " " } getOrElse ""
+	def lineBreak[T](location: Location, target: T) = "\n" * lineBreaks.collect{ case (l: Location, count) if l.matches(location, target) => count }.sum
 	def tabulation(level: Int) = tabulationSequence * tabulationSize * level
 }
 
-trait Location[-T] {
-	def matches[U <: T](other: Location[U], targetValue: U): Boolean = this match {
-		case cl @ ConditionalLocation(`other`) => cl.condition(targetValue)
-		case _ => this == other
-	}
+trait Location {
+	def matches(other: Location, targetValue: Any): Boolean = this == other
 }
-case class Before[-T](target: Encoder[T]) extends Location[T]
-case class After[-T](target: Encoder[T]) extends Location[T]
-case class InBetween[-T](target: Encoder[T]) extends Location[T]
-case class ConditionalLocation[-T](location: Location[T])(val condition: T => Boolean) extends Location[T]
+case class Before(target: Encoder[_]) extends Location
+case class After(target: Encoder[_]) extends Location
+case class InBetween(target: Encoder[_]) extends Location
+case class ConditionalLocation(location: Location)(val condition: PartialFunction[Any, Boolean]) extends Location {
+	override def matches(other: Location, targetValue: Any): Boolean = location == other && condition.isDefinedAt(targetValue) && condition(targetValue)
+}

@@ -34,13 +34,13 @@ trait JavalessEncoderDefinition extends Encoders {
 		
 		tabulationSize = 1,
 		
-		lineBreaks = Map[Location[_],Int](
-			ConditionalLocation(Before(classMember.*)){_.nonEmpty} -> 1,
-			ConditionalLocation(After(classMember.*)){_.nonEmpty} -> 1,
+		lineBreaks = Map[Location,Int](
+			ConditionalLocation(Before(classMember.*)){case l: List[_] => l.nonEmpty} -> 1,
+			ConditionalLocation(After(classMember.*)){case l: List[_] => l.nonEmpty} -> 1,
 			InBetween(classMember) -> 2
 		).withDefaultValue(0),
 		
-		tabulationLevelIncrements = Map[Location[_], Int](
+		tabulationLevelIncrements = Map[Location, Int](
 			InBetween(classMember.*) -> 1
 		).withDefaultValue(0)
 	)

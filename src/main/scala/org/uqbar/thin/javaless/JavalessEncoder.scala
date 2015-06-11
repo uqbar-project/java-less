@@ -12,7 +12,7 @@ class JavalessEncoder(_terminals: => Map[Symbol, String] = DefaultTerminals, _pr
 trait JavalessEncoderDefinition extends Encoders {
 	lazy val program = $[Program] ~> classDefinition.*{ _.definitions }
 	lazy val classDefinition = $[Class] ~> 'class ~ &{ _.name } ~ 'contextOpen ~ classMember.*{ _.body } ~ 'contextClose
-	lazy val classMember = methodDefinition | ""
+	lazy val classMember = methodDefinition | Empty
 	lazy val methodDefinition = $[Method] ~> 'public ~ &{ _.name } ~ arguments{ _.arguments } ~ 'contextOpen ~ 'contextClose
 	lazy val arguments = 'argumentOpen ~ (argument *~ 'argumentSeparator) ~ 'argumentClose
 	lazy val argument = $[Argument] ~> &{ _.atype } ~ 'typeApplication ~ &{ _.name }
@@ -38,6 +38,10 @@ trait JavalessEncoderDefinition extends Encoders {
 			ConditionalLocation(Before(classMember.*)){_.nonEmpty} -> 1,
 			ConditionalLocation(After(classMember.*)){_.nonEmpty} -> 1,
 			InBetween(classMember) -> 2
+		).withDefaultValue(0),
+		
+		tabulationLevelIncrements = Map[Location[_], Int](
+			InBetween(classMember.*) -> 1
 		).withDefaultValue(0)
 	)
 }

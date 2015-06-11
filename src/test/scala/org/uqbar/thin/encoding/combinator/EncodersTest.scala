@@ -20,43 +20,54 @@ case class Y(s: String, n: Int) extends T
 
 class EncodersTest extends FreeSpec with Matchers with Encoders {
 
-	val terminals = Map[Symbol, String]()
+	implicit val terminals = Map[Symbol, String](
+		'Foo -> "Foo",
+		'Bar -> "Bar",
+		'Meh -> "Meh",
+		'X -> "X:",
+		'Y -> "Y:",
+		': -> ":"
+	)
+	
 	implicit val preferences = new EncoderPreferences(
 		spacing = Set(),
 		lineBreaks = Map().withDefaultValue(0),
+		tabulationLevelIncrements = Map().withDefaultValue(0),
 		tabulationSequence = "\t",
 		tabulationSize = 1
 	)
 
 	"Encoder" - {
 
-		"Access" - { 
+		"Reference" - { 
 			"output text should be the encoded object toString" in {
-				& encodingOf (1) should resultIn("1")()
-				& encodingOf ("Foo") should resultIn("Foo")()
-				& encodingOf (Some('c')) should resultIn("Some(c)")()
+				& encodingOf (1) should resultIn("1")(1 -> 0.to(0))
+				& encodingOf ("Foo") should resultIn("Foo")("Foo" -> 0.to(2))
+				
+				val option = Some('c')
+				& encodingOf (option) should resultIn("Some(c)")(option -> 0.to(6))
 			}
 		}
 
 		"Constant" - {
 			"output text should be the given constant" in {
-				Constant("Foo") encodingOf (null) should resultIn("Foo")()
+				Constant('Foo) encodingOf (()) should resultIn("Foo")(() -> 0.to(2))
 			}
 
-			"should be implicitly created from a String" in {
-				("Foo": Encoder[_]) should be (Constant("Foo"))
+			"should be implicitly created from a Symbol" in {
+				('Foo: Encoder[_]) should be (Constant('Foo))
 			}
 		}
 
 		"Append" - {
 			"output text should be the result of appending the output of the given encoders" in {
-				"Foo" ~ "Bar" encodingOf (null) should resultIn("FooBar")()
-				"Foo" ~ "Bar" ~ "Meh" encodingOf (null) should resultIn("FooBarMeh")()
-				"Foo" ~ & ~ "Bar" encodingOf (5) should resultIn("Foo5Bar")()
+				'Foo ~ 'Bar encodingOf (()) should resultIn("FooBar")(() -> 0.to(5))
+				'Foo ~ 'Bar ~ 'Meh encodingOf (()) should resultIn("FooBarMeh")(() -> 0.to(8))
+				'Foo ~ & ~ 'Bar encodingOf (5) should resultIn("Foo5Bar")(5 -> 0.to(6))
 			}
 			
 			"should have syntactic sugar to be crated from target encoders" in {
-				"Foo" ~ & ~ "Bar" should be (Append(Append(Constant("Foo"), &), Constant("Bar")))
+				'Foo ~ & ~ 'Bar should be (Append(Append(Constant('Foo), &), Constant('Bar)))
 			}
 		}
 
@@ -65,7 +76,7 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
 				val target = Some(58)
 
 				&{ e: Option[Any] => e.get } encodingOf (target) should resultIn("58")(58 -> 0.until(2))
-				("X:" ~ & : Encoder[Any]){ e: Option[Any] => e.get } encodingOf (target) should resultIn("X:58")(58 -> 0.until(4))
+				('X ~ & : Encoder[Any]){ e: Option[Any] => e.get } encodingOf (target) should resultIn("X:58")(58 -> 0.until(4))
 			}
 
 			"should have syntactic sugar to be crated from target encoders" in {
@@ -75,60 +86,48 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
 
 		"Or" - {  
 			"output should be the output of the left encoder or, if it fails, the output of the right one" in {
-				val x: Encoder[X] = "X:" ~ &{ x: X => x.s }
-				val y: Encoder[Y] = "Y:" ~ &{y: Y => y.s} ~ ":" ~ &{y: Y => y.n}
+				val x: Encoder[X] = 'X ~ &{ x: X => x.s }
+				val y: Encoder[Y] = 'Y ~ &{y: Y => y.s} ~ ': ~ &{y: Y => y.n}
 
 				val targetX = X("foo") 
 				val targetY = Y("bar", 5)
   
-				(x | y : Encoder[T]) encodingOf (targetX) should resultIn("X:foo")("foo" -> 2.until(5))
-				y | x encodingOf (targetX) should resultIn("X:foo")("foo" -> 2.until(5))
-				x | y encodingOf (targetY) should resultIn("Y:bar:5")("bar" -> 2.until(5), 5 -> 6.until(7))
-				(y | x : Encoder[T]) encodingOf (targetY) should resultIn("Y:bar:5")("bar" -> 2.until(5), 5 -> 6.until(7))
+				(x | y : Encoder[T]) encodingOf (targetX) should resultIn("X:foo")(targetX -> 0.to(4), "foo" -> 2.until(5))
+				y | x encodingOf (targetX) should resultIn("X:foo")(targetX -> 0.to(4), "foo" -> 2.until(5))
+				x | y encodingOf (targetY) should resultIn("Y:bar:5")(targetY -> 0.to(6), "bar" -> 2.until(5), 5 -> 6.until(7))
+				(y | x : Encoder[T]) encodingOf (targetY) should resultIn("Y:bar:5")(targetY -> 0.to(6), "bar" -> 2.until(5), 5 -> 6.until(7))
 			}
 
 			"should have syntactic sugar to be crated from target encoders" in {
-				"Foo" | "Bar" | "Meh" should be (Or(Or(Constant("Foo"), Constant("Bar")), Constant("Meh")))
+				'Foo | 'Bar | 'Meh should be (Or(Or(Constant('Foo), Constant('Bar)), Constant('Meh)))
 			}
 		}
 
 		"RepSep" - {
-			val encoder = &.*~("|")
+			val encoder = &.*~(':)
 
 			"if target list is empty, output should be the empty" in {
-				encoder encodingOf (Nil) should resultIn("")()
+				encoder encodingOf (Nil) should resultIn("")(Nil -> 0.until(0))
 			}
 
 			"if target list has only one element, output should be the output of target encoder, applied to that element, with no separator" in {
-				encoder encodingOf (List(1)) should resultIn("1")(1 -> 0.until(1))
+				val target = List(1)
+				encoder encodingOf (target) should resultIn("1")(target -> 0.to(0), 1 -> 0.to(0))
 			}
 
 			"if target list has more than one element, output should be the output of target encoder, applied to each element, separated by the output of the separator encoder" in {
-				encoder encodingOf (List(1, 2, 3)) should resultIn("1|2|3")(1 -> 0.until(1),2 -> 2.until(3),3 -> 4.until(5))
+				val target = List(1, 2, 3)
+				encoder encodingOf (target) should resultIn("1:2:3")(target -> 0.to(4), 1 -> 0.to(0),2 -> 2.to(2),3 -> 4.to(4))
 			}
 
 			"should have syntactic sugar to be crated from target encoders" in {
-				encoder should be (RepSep(&, Constant("|")))
+				encoder should be (RepSep(&, Constant(':)))
 			}
 
 			"should have syntactic sugar for no separator repetition, to be crated from target encoders" in {
-				&.* should be (RepSep(&, Constant("")))
+				&.* should be (RepSep(&, Empty))
 			}
 		}
-//
-//		"Subcontext" - {
-//			"output should be the target encoder output, with one more tabulation level" in {
-//				"{" ~~ ("Foo") ~ "}" encodingOf (null) should resultIn("{\n\tFoo\n}")()
-//			}
-//
-//			"should be nestable" in {
-//				"class C {" ~~ ("method M {" ~~ (&.*) ~ "}") ~ "}" encodingOf (List("Line 1", "Line 2", "Line 3")) should resultIn("class C {\n\tmethod M {\n\t\tLine 1\n\t\tLine 2\n\t\tLine 3\n\t}\n}")()
-//			}
-//
-//			"should have syntactic sugar  to be crated from target encoders" in {
-//				"Foo" ~~ (&) ~ "Bar" should be (Append(Append(Constant("Foo"), Subcontext(&)), Constant("Bar")))
-//			}
-//		}
 	}
 	
 
@@ -145,18 +144,19 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
 				case Success((_, references)) =>
 					val unexpectedReferences = references.filterNot(expectedReferences isDefinedAt _._1)
 					val missedReferences = expectedReferences.filterNot(references isDefinedAt _._1)
-					val wrongReferences = references.
-						filterNot{ case (key, _) => unexpectedReferences.isDefinedAt(key) || missedReferences.isDefinedAt(key) }.
-						map{ case (key, value) => (key, (value.start, value.end), (expectedReferences(key).start, expectedReferences(key).end)) }.
-						filter{ case (key, value, expected) => value != expected }
+					val wrongReferences = references.filterNot{ case (key, value) =>
+						unexpectedReferences.isDefinedAt(key) ||
+						missedReferences.isDefinedAt(key) ||
+						value == expectedReferences(key)
+					}
 
-					if (unexpectedReferences.nonEmpty) (false, s"""Encoding yielded references to unexpected objects: ${unexpectedReferences.keys.mkString("[", ", ", "]")}""")
-					else if (missedReferences.nonEmpty) (false, s"""Encoding didn't yield references to expected objects: ${missedReferences.keys.mkString("[", ", ", "]")}""")
-					else if (wrongReferences.nonEmpty) (false, s"""Encoding yielded wrong references: ${wrongReferences.map{ case (k, (vs, ve), (es, ee)) => s"$k: $vs to $ve wasn't $es to $ee" }.mkString("[", ", ", "]")}""")
+					if (unexpectedReferences.nonEmpty) (false, s"""Encoding yielded references to unexpected objects: ${unexpectedReferences.map{case (key, value) => s"$key: ${if(value.isEmpty) value.start else value.head} to ${if(value.isEmpty) value.end else value.last}"}.mkString("[", ", ", "]")}""")
+					else if (missedReferences.nonEmpty) (false, s"""Encoding didn't yield references to expected objects: ${missedReferences.map{case (key, value) => s"$key: ${if(value.isEmpty) value.start else value.head} to ${if(value.isEmpty) value.end else value.last}"}.mkString("[", ", ", "]")}""")
+					else if (wrongReferences.nonEmpty) (false, s"""Encoding yielded wrong references: ${wrongReferences.map{ case (key, value) => s"$key: ${if(value.isEmpty) value.start else value.head} to ${if(value.isEmpty) value.end else value.last} wasn't ${if(expectedReferences(key).isEmpty) expectedReferences(key).start else expectedReferences(key).head} to ${if(expectedReferences(key).isEmpty) expectedReferences(key).end else expectedReferences(key).last}" }.mkString("[", ", ", "]")}""")
 					else (true, "Encoded was as expected")
 				case Failure(e) =>
 					val stack = new StringWriter
-					e.printStackTrace(new PrintWriter(stack))
+					e.printStackTrace(new PrintWriter(stack))					
 					(false, s"Encoding failed because of $e: ${stack.toString}}")
 			}
 
@@ -165,6 +165,6 @@ class EncodersTest extends FreeSpec with Matchers with Encoders {
 	}
 
 	protected implicit class TestedEncoder[T](encoder: Encoder[T]) {
-		def encodingOf(target: T)(implicit preferences: EncoderPreferences) = encoder.encode(target)(preferences)
+		def encodingOf(target: T)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = encoder.encode(target)(preferences, terminals)
 	}
 }

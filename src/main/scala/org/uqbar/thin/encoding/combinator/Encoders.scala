@@ -82,7 +82,7 @@ case class Or[T, -L <: T, -R <: T](left: Encoder[L], right: Encoder[R]) extends 
 			Try{ target.asInstanceOf[R] }.flatMap{ target => right.encode(target, level) }
 }
 
-case class RepSep[-T](body: Encoder[T], separator: Encoder[Any]) extends Encoder[List[T]] {
+case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encoder[List[T]] {
 	protected def doEncode(target: List[T], level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) =
 		(if (target.isEmpty) EncoderResult()
 		else (body.encode(target.head, level) /: target.tail){ (previous, elem) =>

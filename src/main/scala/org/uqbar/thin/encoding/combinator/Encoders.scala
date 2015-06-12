@@ -2,94 +2,121 @@ package org.uqbar.thin.encoding.combinator
 
 import scala.language.implicitConversions
 import scala.language.existentials
-import scala.reflect.runtime.universe
 import scala.util.Try
-
-import scala.reflect.runtime.universe.TypeTag
-import scala.reflect.runtime.universe
 
 trait Encoders {
 	def preferences: EncoderPreferences
 	def terminals: Map[Symbol, String]
 
-	implicit protected def StringToEncoder(s: String): Encoder[Any] = Constant(s)
-	implicit protected def SymbolToEncoder(s: Symbol): Encoder[Any] = Constant(terminals(s))
-	implicit protected def EncoderToEncoder[U <: Product: TypeTag](e: Encoder[_]): Encoder[U] = e.^^[U]
+	def encode[T](encoder: Encoder[T])(target: T) = encoder.encode(target)(preferences, terminals)
 
-	def encode[T](encoder: Encoder[T])(target: T) = encoder(preferences)(EncoderResult(target))
+	protected def $[T] = new Binder[T]
+	protected class Binder[T] {
+		def ~>(right: Encoder[T]): Encoder[T] = right
+	}
+
+	protected abstract class EncoderSyntaxSugar[T, U <% Encoder[T]] {
+		def left: U
+		def |[V <: T, U >: V, R <: U](right: Encoder[R]): Encoder[U] = Or(left, right)
+		def ~(right: Encoder[T]): Encoder[T] = Append(left, right)
+		def * : Encoder[List[T]] = RepSep(left, Empty)
+		def *~(separator: Encoder[Any]): Encoder[List[T]] = RepSep(left, separator)
+		def apply[U](f: U => T): Encoder[U] = Transform(left)(f)
+	}
+
+	implicit protected class ExtEncoder[T](val left: Encoder[T]) extends EncoderSyntaxSugar[T, Encoder[T]]
+	implicit protected class ExtSymbol[T](val left: Symbol) extends EncoderSyntaxSugar[T, Symbol]
+
+	implicit protected def SymbolToEncoder(s: Symbol): Encoder[Any] = Constant(s)
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 // ENCODERS
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
-abstract class Encoder[T <: Any: TypeTag] {
-	def apply(preferences: EncoderPreferences)(target: EncoderResult): EncoderResult
+abstract class Encoder[-T] {
+	def encode(target: T, level: Int = 0)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = for {
+		beforeLineBreaks <- EncoderResult(preferences.lineBreak(After(this), target))
+		beforeSpace <- EncoderResult(preferences.space(Before(this), target))
+		content <- doEncode(target, level + preferences.tabulationLevelIncrements(InBetween(this)))
+		afterLineBreaks <- EncoderResult(preferences.lineBreak(After(this), target))
+		afterSpace <- EncoderResult(preferences.space(After(this), target))
+	} yield beforeLineBreaks ++ beforeSpace ++ content ++ afterLineBreaks ++ afterSpace
 
-	def ~[U: TypeTag](other: Encoder[U]): Encoder[List[Any]] = Append(this, other)
+	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]): EncoderResult
 
-	def |[U >: T: TypeTag, V <: U](other: Encoder[V]): Encoder[U] = Or(this, other)
-
-	def * = *~(Constant(""))
-
-	def *~(separator: Encoder[_]): Encoder[List[T]] = RepSep(this, separator)
-
-	def ^^[U <: Product: TypeTag](): Encoder[U] = this ^^ { u: U => u.productIterator.toList }
-	def ^^[U: TypeTag, R >: T](f: U => List[R]): Encoder[U] = Extract[T, U, R](this)(f)
+	protected def tabulate(target: EncoderResult, level: Int)(implicit preferences: EncoderPreferences): EncoderResult = for {
+		tabulation <- EncoderResult(preferences.tabulation(level))
+		content <- target
+	} yield tabulation ++ content
 }
 
-case object Id extends Encoder[Any] {
-	def apply(preferences: EncoderPreferences)(target: EncoderResult) = target
+case object Empty extends Encoder[Any] {
+	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = EncoderResult()
 }
 
-case object __ extends Encoder[Any] {
-	def apply(preferences: EncoderPreferences)(target: EncoderResult) = for { (text, references, p :: pending) <- target } yield (p.toString, references, pending)
+case object & extends Encoder[Any] {
+	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(EncoderResult(target.toString).map(_ referencing target), level)
 }
 
-case class Constant(value: String) extends Encoder[Any] {
-	def apply(preferences: EncoderPreferences)(target: EncoderResult) = {
-		val beforeSpace = if (preferences.spacing(Before(Constant(value)))) " " else ""
-		val afterSpace = if (preferences.spacing(After(Constant(value)))) " " else ""
-			
-		for { (_, references, pending) <- target } yield (s"$beforeSpace$value$afterSpace", references, pending)
-	}
+case class Constant(terminal: Symbol) extends Encoder[Any] {
+	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(EncoderResult(terminals(terminal)).map(_ referencing target), level)
 }
 
-case class Extract[T: TypeTag, U, R >: T](before: Encoder[T])(f: U => List[R])(implicit tt: TypeTag[U]) extends Encoder[U] {
-	def apply(preferences: EncoderPreferences)(target: EncoderResult) = for {
-		(previousText, previousReferences, p :: previousPending) <- target
-		if universe.runtimeMirror(p.getClass.getClassLoader).reflect(p).symbol.toType <:< tt.tpe
-		(nextText, nextReferences, nextPending) <- before(preferences)(Try(previousText, previousReferences, f(p.asInstanceOf[U]) ::: previousPending))
-	} yield (nextText, nextReferences + (p, 0 until nextText.size), nextPending)
+case class Append[T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
+	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(for {
+		previous <- left.encode(target)
+		next <- right.encode(target)
+	} yield previous ++ next referencing target, level)
 }
 
-case class Or[T: TypeTag, U >: T: TypeTag, V <: U](some: Encoder[T], other: Encoder[V]) extends Encoder[U] {
-	def apply(preferences: EncoderPreferences)(target: EncoderResult) = some(preferences)(target).orElse(other(preferences)(target))
+case class Transform[T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
+	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = for {
+		next <- before.encode(f(target), level)
+	} yield next
 }
 
-case class RepSep[T: TypeTag, S: TypeTag](body: Encoder[T], separator: Encoder[S]) extends Encoder[List[T]] {
-	def apply(preferences: EncoderPreferences)(target: EncoderResult) = for {
-		(_, references, (ps: List[_]) :: _) <- target
-		encoder = if (ps.isEmpty) Id else 1.until(ps.size).map{ _ => separator ~ body }.fold(body)(_ ~ _)
-		result <- encoder(preferences)(Try("", references, ps))
-	} yield result
+case class Or[T, -L <: T, -R <: T](left: Encoder[L], right: Encoder[R]) extends Encoder[T] {
+	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) =
+		Try{ target.asInstanceOf[L] }.flatMap{ target => left.encode(target, level) } orElse
+			Try{ target.asInstanceOf[R] }.flatMap{ target => right.encode(target, level) }
 }
 
-case class Append[L: TypeTag, R: TypeTag](left: Encoder[L], right: Encoder[R]) extends Encoder[List[Any]] {
-	def apply(preferences: EncoderPreferences)(target: EncoderResult) = for {
-		previous @ (previousText, previousReferences, previousPending) <- left(preferences)(target)
-		(nextText, nextReferences, nextPending) <- right(preferences)(Try("", previousReferences, previousPending))
-		shiftedNextReferences = nextReferences.map{ case (k, v) => k -> (v.start + previousText.size until v.end + previousText.size) }
-	} yield (previousText + nextText, shiftedNextReferences ++ previousReferences, nextPending)
+case class RepSep[-T](body: Encoder[T], separator: Encoder[Any]) extends Encoder[List[T]] {
+	protected def doEncode(target: List[T], level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) =
+		(if (target.isEmpty) EncoderResult()
+		else (body.encode(target.head, level) /: target.tail){ (previous, elem) =>
+			for {
+				previous <- previous
+				(separatorText,_) <- separator.encode(())
+				separator <- EncoderResult(separatorText)
+				break <- EncoderResult(preferences.lineBreak(InBetween(body), elem))
+				body <- body.encode(elem, level)
+			} yield previous ++ separator ++ break ++ body
+		}).map(_ referencing target)
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 // PREFERENCES
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
-class EncoderPreferences(val spacing: Map[Location, Boolean])
+class EncoderPreferences(
+	spacing: Set[Location],
+	tabulationSequence: String,
+	tabulationSize: Int,
+	lineBreaks: Map[Location, Int],
+	val tabulationLevelIncrements: Map[Location, Int]) {
+	def space[T](location: Location, target: T) = spacing.collectFirst{ case l: Location if l.matches(location, target) => " " } getOrElse ""
+	def lineBreak[T](location: Location, target: T) = "\n" * lineBreaks.collect{ case (l: Location, count) if l.matches(location, target) => count }.sum
+	def tabulation(level: Int) = tabulationSequence * tabulationSize * level
+}
 
-trait Location
-case class Before(target: Encoder[Any]) extends Location
-case class After(target: Encoder[Any]) extends Location
-case class Between(left: Encoder[Any], right: Encoder[Any]) extends Location
+trait Location {
+	def matches(other: Location, targetValue: Any): Boolean = this == other
+}
+case class Before(target: Encoder[_]) extends Location
+case class After(target: Encoder[_]) extends Location
+case class InBetween(target: Encoder[_]) extends Location
+case class ConditionalLocation(location: Location)(val condition: PartialFunction[Any, Boolean]) extends Location {
+	override def matches(other: Location, targetValue: Any): Boolean = location == other && condition.isDefinedAt(targetValue) && condition(targetValue)
+}

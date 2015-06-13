@@ -1,7 +1,16 @@
 package org.uqbar.thin.javaless
 
 import scala.language.implicitConversions
-import org.uqbar.thin.encoding.combinator._
+
+import org.uqbar.thin.encoding.combinator.{& => &}
+import org.uqbar.thin.encoding.combinator.After
+import org.uqbar.thin.encoding.combinator.Before
+import org.uqbar.thin.encoding.combinator.ConditionalLocation
+import org.uqbar.thin.encoding.combinator.Empty
+import org.uqbar.thin.encoding.combinator.EncoderPreferences
+import org.uqbar.thin.encoding.combinator.Encoders
+import org.uqbar.thin.encoding.combinator.InBetween
+import org.uqbar.thin.encoding.combinator.Location
 
 class JavalessEncoder(_terminals: => Map[Symbol, String] = DefaultTerminals, _preferences: => EncoderPreferences = null) extends JavalessEncoderDefinition {
 	def terminals = _terminals
@@ -10,12 +19,12 @@ class JavalessEncoder(_terminals: => Map[Symbol, String] = DefaultTerminals, _pr
 }
 
 trait JavalessEncoderDefinition extends Encoders {
-	lazy val program = $[Program] ~> classDefinition.*{ _.definitions }
+
+	lazy val program = $[Program] ~> classDefinition.*{ _.classes }
 	lazy val classDefinition = $[Class] ~> 'class ~ &{ _.name } ~ 'contextOpen ~ classMember.*{ _.body } ~ 'contextClose
 	lazy val classMember = methodDefinition | Empty
-	lazy val methodDefinition = $[Method] ~> 'public ~ &{ _.name } ~ arguments{ _.arguments } ~ 'contextOpen ~ 'contextClose
-	lazy val arguments = 'argumentOpen ~ (argument *~ 'argumentSeparator) ~ 'argumentClose
-	lazy val argument = $[Argument] ~> &{ _.atype } ~ 'typeApplication ~ &{ _.name }
+	lazy val methodDefinition = $[Method] ~> &{ _.name } ~ arguments{ _.arguments } ~ 'contextOpen ~ 'contextClose
+	lazy val arguments = 'argumentOpen ~ (& *~ 'argumentSeparator) ~ 'argumentClose
 
 	//─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 	// PREFERENCES
@@ -24,22 +33,20 @@ trait JavalessEncoderDefinition extends Encoders {
 	lazy val DefaultPreferences = new EncoderPreferences(
 		spacing = Set(
 			After('class),
-			After('public),
 			After('argumentSeparator),
-			After('typeApplication),
 			Before('contextOpen)
 		),
-		
+
 		tabulationSequence = "\t",
-		
+
 		tabulationSize = 1,
-		
-		lineBreaks = Map[Location,Int](
-			ConditionalLocation(Before(classMember.*)){case l: List[_] => l.nonEmpty} -> 1,
-			ConditionalLocation(After(classMember.*)){case l: List[_] => l.nonEmpty} -> 1,
+
+		lineBreaks = Map[Location, Int](
+			ConditionalLocation(Before(classMember.*)){ case l: List[_] => l.nonEmpty } -> 1,
+			ConditionalLocation(After(classMember.*)){ case l: List[_] => l.nonEmpty } -> 1,
 			InBetween(classMember) -> 2
 		).withDefaultValue(0),
-		
+
 		tabulationLevelIncrements = Map[Location, Int](
 			InBetween(classMember.*) -> 1
 		).withDefaultValue(0)

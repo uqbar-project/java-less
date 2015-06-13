@@ -1,18 +1,8 @@
 package org.uqbar.thin.javaless
 
-import java.io.PrintWriter
-import java.io.StringWriter
-import scala.annotation.migration
 import scala.language.implicitConversions
-import scala.util.Failure
-import scala.util.Success
+
 import org.scalatest.FreeSpec
-import org.scalatest.Matchers
-import org.scalatest.matchers.MatchResult
-import org.scalatest.matchers.Matcher
-import org.uqbar.thin.encoding.combinator.Encoder
-import org.uqbar.thin.encoding.combinator.EncoderPreferences
-import org.uqbar.thin.encoding.combinator.T
 import org.uqbar.thin.encoding.combinator.EncoderMatchers
 
 class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with EncoderMatchers {
@@ -39,11 +29,11 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 					nonEmptyClass should beEncodedTo("""
 						class MyClass {
-							public calculate() {}
+							calculate() {}
 						}
-					""")(nonEmptyClass -> 0.to(39), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(37), emptyMethod -> 17.to(37), emptyMethod.name -> 24.to(32), Nil -> 33.to(34))
+					""")(nonEmptyClass -> 0.to(32), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(30), emptyMethod -> 17.to(30), emptyMethod.name -> 17.to(25), Nil -> 26.to(27))
 				}
-
+				
 				"with two method definitions" in {
 					val emptyMethod1 = Method("calculate", Nil, Nil)
 					val emptyMethod2 = Method("recalculate", Nil, Nil)
@@ -51,11 +41,11 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 					nonEmptyClass should beEncodedTo("""
 						class MyClass {
-							public calculate() {}
+							calculate() {}
 
-							public recalculate() {}
+							recalculate() {}
 						}
-					""")(nonEmptyClass -> 0.to(65), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(63), emptyMethod1 -> 17.to(37), emptyMethod1.name -> 24.to(32), emptyMethod2 -> 41.to(63), emptyMethod2.name -> 48.to(58), Nil -> 33.to(34))
+					""")(nonEmptyClass -> 0.to(51), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(49), emptyMethod1 -> 17.to(30), emptyMethod1.name -> 17.to(25), emptyMethod2 -> 34.to(49), emptyMethod2.name -> 34.to(44), Nil -> 26.to(27))
 				}
 
 				"for methods" - {
@@ -64,22 +54,19 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 					"with no arguments or body" in {
 						val argumentlessEmptyMethod = Method("calculate", Nil, Nil)
 
-						argumentlessEmptyMethod should beEncodedTo("public calculate() {}")(argumentlessEmptyMethod -> 0.to(20), argumentlessEmptyMethod.name -> 7.to(15), argumentlessEmptyMethod.arguments -> 16.to(17))
+						argumentlessEmptyMethod should beEncodedTo("calculate() {}")(argumentlessEmptyMethod -> 0.to(13), argumentlessEmptyMethod.name -> 0.to(8), argumentlessEmptyMethod.arguments -> 9.to(10))
 					}
 
 					"with one argument but no body" in {
-						val arg = Argument("void", "arg")
-						val argumentedEmptyMethod = Method("calculate", arg :: Nil, Nil)
+						val argumentedEmptyMethod = Method("calculate", "arg" :: Nil, Nil)
 
-						argumentedEmptyMethod should beEncodedTo("public calculate(void arg) {}")(argumentedEmptyMethod -> 0.to(28), argumentedEmptyMethod.name -> 7.to(15), argumentedEmptyMethod.arguments -> 16.to(25), arg -> 17.to(24), arg.name -> 22.to(24), arg.atype -> 17.to(20))
+						argumentedEmptyMethod should beEncodedTo("calculate(arg) {}")(argumentedEmptyMethod -> 0.to(16), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(13), "arg" -> 10.to(12))
 					}
 
 					"with arguments but no body" in {
-						val arg1 = Argument("void", "arg1")
-						val arg2 = Argument("void", "arg2")
-						val argumentedEmptyMethod = Method("calculate", arg1 :: arg2 :: Nil, Nil)
+						val argumentedEmptyMethod = Method("calculate", "arg1" :: "arg2" :: Nil, Nil)
 
-						argumentedEmptyMethod should beEncodedTo("public calculate(void arg1, void arg2) {}")(argumentedEmptyMethod -> 0.to(40), argumentedEmptyMethod.name -> 7.to(15), argumentedEmptyMethod.arguments -> 16.to(37), arg1 -> 17.to(25), arg1.name -> 22.to(25), arg1.atype -> 17.to(20), arg2 -> 28.until(37), arg2.name -> 33.to(36), arg2.atype -> 17.to(20))
+						argumentedEmptyMethod should beEncodedTo("calculate(arg1, arg2) {}")(argumentedEmptyMethod -> 0.to(23), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(20), "arg1" -> 10.to(13), "arg2" -> 16.to(19))
 					}
 
 				}

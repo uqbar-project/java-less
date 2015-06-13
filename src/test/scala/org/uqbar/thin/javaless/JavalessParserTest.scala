@@ -19,11 +19,11 @@ class JavalessParserTest extends FreeSpec with ParserTest[JavalessParserDefiniti
         }
 
         "for a simle method" in {
-          "class MyClass { public calculate() {} }" should beParsedTo(Class("MyClass", List(Method("calculate", List(), List()))))
+          "class MyClass { calculate() {} }" should beParsedTo(Class("MyClass", List(Method("calculate", Nil, Nil))))
         }
 
         "for a simle method with arguments" in {
-          "class MyClass { public calculate(void arg1, void arg2) {} }" should beParsedTo(Class("MyClass", List(Method("calculate", List(Argument("void", "arg1"), Argument("void", "arg2")), List()))))
+          "class MyClass { calculate(arg1, arg2) {} }" should beParsedTo(Class("MyClass", List(Method("calculate", List("arg1", "arg2"), Nil))))
         }
       }
     }

@@ -7,6 +7,6 @@ import org.uqbar.voodoo.mutator._
 object JavalessCompiler extends JavalessCompiler
 trait JavalessCompiler {
 	def compile(program: Program,targetPath: String) = 
-    for(classDefinition <- program.definitions)
-		ClassWriter.writeClass($(classDefinition.name) let {it => }, targetPath) 
+    for(classDefinition <- program.classes)
+    	ClassWriter.writeClass($(classDefinition.name) let {it => }, targetPath) 
 }

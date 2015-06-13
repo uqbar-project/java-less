@@ -7,7 +7,7 @@ scalaVersion := "2.11.6"
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 lazy val cacao = FDProject(
-	"org.uqbar" %% "voodoo" % "1.3.3",
+	"org.uqbar" %% "voodoo" % "1.3.5",
 	"org.uqbar" %% "identity-map" % "latest.integration",
 	"org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
 	"org.scala-lang" % "scala-reflect" % "2.11.6",

@@ -1,16 +1,14 @@
 package org.uqbar.thin.javaless
 
+import java.io.File
+
 import scala.language.implicitConversions
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
+
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.Finders
 import org.scalatest.FreeSpec
 import org.scalatest.Matchers
-import org.scalatest.matchers.MatchResult
-import org.scalatest.matchers.Matcher
-import java.util.IdentityHashMap
 import org.uqbar.voodoo.BytecodeClassLoader
-import java.io.File
-import org.scalatest.BeforeAndAfterAll
 
 class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll with JavalessCompiler {
 
@@ -33,7 +31,7 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 
 			"for an empty class" in {
 				val target = Class("MyClass", Nil)
-				
+
 				val classLoader = new BytecodeClassLoader
 				compile(Program(target :: Nil), TARGET_FILE)
 				val importedClass = classLoader.importClass(TARGET_FILE)
@@ -47,15 +45,15 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 					Method("foo", Nil, Nil),
 					Method("bar", Nil, Nil)
 				))
-				
+
 				val classLoader = new BytecodeClassLoader
 				compile(Program(target :: Nil), TARGET_FILE)
 				val importedClass = classLoader.importClass(TARGET_FILE)
 
 				importedClass.getName should be(target.name)
 				importedClass.getDeclaredMethods should have length 2
-				importedClass.getDeclaredMethods()(0) should have ('name("foo"))
-				importedClass.getDeclaredMethods()(1) should have ('name("bar"))
+				importedClass.getDeclaredMethod("foo") should have ('name("foo"))
+				importedClass.getDeclaredMethod("bar") should have ('name("bar"))
 			}
 
 			"for a class with empty methods with parameters" in {
@@ -63,7 +61,7 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 					Method("foo", "par1" :: Nil, Nil),
 					Method("bar", "par1" :: "par2" :: Nil, Nil)
 				))
-				
+
 				val classLoader = new BytecodeClassLoader
 				compile(Program(target :: Nil), TARGET_FILE)
 				val importedClass = classLoader.importClass(TARGET_FILE)
@@ -72,13 +70,13 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 
 				importedClass.getDeclaredMethods should have length 2
 
-				val importedFooMethod = importedClass.getDeclaredMethod("foo",classOf[Object])
+				val importedFooMethod = importedClass.getDeclaredMethod("foo", classOf[Object])
 				importedFooMethod should have ('name("foo"))
 				importedFooMethod.getParameters should have length 1
 
-				val importedBarMethod = importedClass.getDeclaredMethod("foo",classOf[Object])
-				importedClass.getDeclaredMethods()(1) should have ('name("bar"))
-				importedClass.getDeclaredMethods()(1).getParameters() should have length 2
+				val importedBarMethod = importedClass.getDeclaredMethod("bar", classOf[Object], classOf[Object])
+				importedBarMethod should have ('name("bar"))
+				importedBarMethod.getParameters should have length 2
 			}
 
 			"for a class with fields" in {
@@ -86,7 +84,7 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 					Field("foo"),
 					Field("bar")
 				))
-				
+
 				val classLoader = new BytecodeClassLoader
 				compile(Program(target :: Nil), TARGET_FILE)
 				val importedClass = classLoader.importClass(TARGET_FILE)

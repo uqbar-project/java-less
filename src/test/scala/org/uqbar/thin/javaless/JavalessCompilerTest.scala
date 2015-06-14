@@ -33,6 +33,7 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 
 			"for an empty class" in {
 				val target = Class("MyClass", Nil)
+				
 				val classLoader = new BytecodeClassLoader
 				compile(Program(target :: Nil), TARGET_FILE)
 				val importedClass = classLoader.importClass(TARGET_FILE)
@@ -46,6 +47,7 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 					Method("foo", Nil, Nil),
 					Method("bar", Nil, Nil)
 				))
+				
 				val classLoader = new BytecodeClassLoader
 				compile(Program(target :: Nil), TARGET_FILE)
 				val importedClass = classLoader.importClass(TARGET_FILE)
@@ -61,19 +63,38 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 					Method("foo", "par1" :: Nil, Nil),
 					Method("bar", "par1" :: "par2" :: Nil, Nil)
 				))
+				
 				val classLoader = new BytecodeClassLoader
 				compile(Program(target :: Nil), TARGET_FILE)
 				val importedClass = classLoader.importClass(TARGET_FILE)
 
 				importedClass.getName should be(target.name)
-				
+
 				importedClass.getDeclaredMethods should have length 2
-				
-				importedClass.getDeclaredMethods()(0) should have ('name("foo"))
-				importedClass.getDeclaredMethods()(0).getParameters() should have length 1
-				
+
+				val importedFooMethod = importedClass.getDeclaredMethod("foo",classOf[Object])
+				importedFooMethod should have ('name("foo"))
+				importedFooMethod.getParameters should have length 1
+
+				val importedBarMethod = importedClass.getDeclaredMethod("foo",classOf[Object])
 				importedClass.getDeclaredMethods()(1) should have ('name("bar"))
 				importedClass.getDeclaredMethods()(1).getParameters() should have length 2
+			}
+
+			"for a class with fields" in {
+				val target = Class("MyClass", List(
+					Field("foo"),
+					Field("bar")
+				))
+				
+				val classLoader = new BytecodeClassLoader
+				compile(Program(target :: Nil), TARGET_FILE)
+				val importedClass = classLoader.importClass(TARGET_FILE)
+
+				importedClass.getName should be(target.name)
+				importedClass.getDeclaredFields should have length 2
+				importedClass.getDeclaredField("foo") should have ('name("foo"))
+				importedClass.getDeclaredField("bar") should have ('name("bar"))
 			}
 
 		}

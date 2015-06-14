@@ -67,8 +67,8 @@ trait EncoderMatchers extends Matchers {
 
 		protected def pretty(text: String): String = s""""${text.replaceAll(" ", "·").replaceAll("\t", "»").replaceAll("\n", "¶\n")}""""
 		protected def pretty(range: Range): String = s"${if (range.isEmpty) range.start else range.head} to ${if (range.isEmpty) range.end else range.last}"
-		protected def pretty(references: Map[Any, Range]): String = references.map(r => s"$key: ${pretty(r._2)}").mkString("[", ", ", "]")
-		protected def pretty(references: Map[Any, Range], expectedReferences: Map[Any, Range]): String = references.map{ case (key, value) => s"$key: ${pretty(value)} wasn't ${pretty(expectedReferences(key))}" }.mkString("[", ", ", "]")
+		protected def pretty(references: Map[Any, Range]): String = references.map(r => s"${r._1}: ${pretty(r._2)}").mkString("[", ", ", "]")
+		protected def pretty(references: Map[Any, Range], expectedReferences: Map[Any, Range]): String = references.map{ r => s"${r._1}: ${pretty(r._2)} wasn't ${pretty(expectedReferences(r._1))}" }.mkString("[", ", ", "]")
 	}
 
 }

@@ -65,8 +65,8 @@ class EncodersTest extends FreeSpec with Encoders with EncoderMatchers {
 			"given a transform function, the output should be the output of the given encoder, applied to the target transformed by that function" in {
 				val target = Some(58)
 
-				&{ (_: Option[Any]).get } encode (target) should resultIn("58")(58 -> 0.until(2))
-				('X ~ &){ (_: Option[Any]).get } encode (target) should resultIn("X:58")(58 -> 0.until(4))
+				&{ (_: Option[Any]).get } encode (target) should resultIn("58")(target -> 0.to(1), 58 -> 0.to(1))
+				('X ~ &){ (_: Option[Any]).get } encode (target) should resultIn("X:58")(target -> 0.to(3), 58 -> 0.to(3))
 			}
 
 			"should have syntactic sugar to be crated from target encoders" in {

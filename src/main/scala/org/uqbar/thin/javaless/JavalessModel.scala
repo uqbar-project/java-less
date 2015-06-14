@@ -8,5 +8,6 @@ case class Class(name: Identifier, body: List[ClassMember]) extends SyntaxElemen
 
 sealed trait ClassMember extends SyntaxElement
 case class Method(name: Identifier, arguments: List[Identifier],  body: List[Sentence]) extends ClassMember
+case class Field(name: Identifier) extends ClassMember
 
 sealed trait Sentence

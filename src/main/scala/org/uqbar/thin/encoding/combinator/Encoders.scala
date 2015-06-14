@@ -3,6 +3,7 @@ package org.uqbar.thin.encoding.combinator
 import scala.language.implicitConversions
 import scala.language.existentials
 import scala.util.Try
+import org.uqbar.utils.collections.immutable.IdentityMap
 
 trait Encoders {
 	def preferences: EncoderPreferences
@@ -72,8 +73,8 @@ case class Append[T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
 
 case class Transform[T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
 	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = for {
-		next <- before.encode(f(target), level)
-	} yield next
+		(nextText, nextReferences) <- before.encode(f(target), level)
+	} yield (nextText, nextReferences.updated(target, nextReferences(f(target))).asInstanceOf[IdentityMap[Any,Range]])
 }
 
 case class Or[T, -L <: T, -R <: T](left: Encoder[L], right: Encoder[R]) extends Encoder[T] {

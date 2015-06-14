@@ -15,6 +15,8 @@ trait JavalessCompiler {
 						it += (name :: MethodType($[Unit], arguments.map(_ => $[Object]): _*))(
 							RETURN
 						)
+					case Field(name) =>
+						it += name :: $[Object]
 				}
 			}
 

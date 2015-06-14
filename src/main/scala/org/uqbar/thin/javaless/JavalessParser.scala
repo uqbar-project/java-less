@@ -17,7 +17,8 @@ trait JavalessParserDefinition extends JavaTokenParsers {
   lazy val identifier = ident
   lazy val program = classDefinition.* ^^ Program
   lazy val classDefinition = 'class ~> identifier ~ 'contextOpen ~ classMember.* <~ 'contextClose ^^ { case name ~ _ ~ methods => Class(name, methods) }
-  lazy val classMember = methodDefinition
+  lazy val classMember = methodDefinition | fieldDefinition
   lazy val methodDefinition = identifier ~ arguments <~ 'contextOpen ~ 'contextClose ^^ { case name ~ args => Method(name, args, Nil) }
+  lazy val fieldDefinition = identifier ^^ Field
   lazy val arguments = 'argumentOpen ~> repsep(identifier, 'argumentSeparator) <~ 'argumentClose
 }

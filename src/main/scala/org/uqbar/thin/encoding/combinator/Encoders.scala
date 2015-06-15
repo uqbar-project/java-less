@@ -36,64 +36,63 @@ trait Encoders {
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
 abstract class Encoder[-T] {
-	def encode(target: T, level: Int = 0)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = for {
-		beforeLineBreaks <- EncoderResult(preferences.lineBreak(After(this), target))
-		beforeSpace <- EncoderResult(preferences.space(Before(this), target))
+	def encode(target: T, level: Int = 0)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = for {
+		beforeLineBreaks <- preferences.lineBreak(After(this), target)
+		beforeSpace <- preferences.space(Before(this), target)
 		content <- doEncode(target, level + preferences.tabulationLevelIncrements(InBetween(this)))
-		afterLineBreaks <- EncoderResult(preferences.lineBreak(After(this), target))
-		afterSpace <- EncoderResult(preferences.space(After(this), target))
+		afterLineBreaks <- preferences.lineBreak(After(this), target)
+		afterSpace <- preferences.space(After(this), target)
 	} yield beforeLineBreaks ++ beforeSpace ++ (content referencing target) ++ afterLineBreaks ++ afterSpace
 
-	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]): EncoderResult
+	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]): EncoderResult
 
 	protected def tabulate(target: EncoderResult, level: Int)(implicit preferences: EncoderPreferences): EncoderResult = for {
-		tabulation <- EncoderResult(preferences.tabulation(level))
+		tabulation <- preferences.tabulation(level)
 		content <- target
 	} yield tabulation ++ content
 }
 
 case object Empty extends Encoder[Any] {
-	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = EncoderResult()
+	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = EncoderResult()
 }
 
 case object & extends Encoder[Any] {
-	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(EncoderResult(target.toString), level)
+	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = tabulate(EncoderResult(target.toString), level)
 }
 
 case class Constant(terminal: Symbol) extends Encoder[Any] {
-	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(EncoderResult(terminals(terminal)), level)
+	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = tabulate(EncoderResult(terminals(terminal)), level)
 }
 
 case class Append[T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
-	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(for {
-		previous <- left.encode(target)
+	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = for {
+		previous <- left.encode(target, level)
 		next <- right.encode(target)
-	} yield previous ++ next, level)
+	} yield previous ++ next
 }
 
 case class Transform[T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
-	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = for {
+	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = for {
 		next <- before.encode(f(target), level)
 	} yield next
 }
 
 case class Or[T, -L <: T, -R <: T](left: Encoder[L], right: Encoder[R]) extends Encoder[T] {
-	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) =
-		Try{ target.asInstanceOf[L] }.flatMap{ target => left.encode(target, level) } orElse
-			Try{ target.asInstanceOf[R] }.flatMap{ target => right.encode(target, level) }
+	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) =
+		Try(target.asInstanceOf[L]).flatMap{ left.encode(_, level) } orElse
+			Try(target.asInstanceOf[R]).flatMap{ right.encode(_, level) }
 }
 
 case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encoder[List[T]] {
-	protected def doEncode(target: List[T], level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) =
+	protected def doEncode(target: List[T], level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) =
 		if (target.isEmpty) EncoderResult()
 		else (body.encode(target.head, level) /: target.tail){ (previous, elem) =>
 			for {
 				previous <- previous
-				(separatorText,_) <- separator.encode(())
-				separator <- EncoderResult(separatorText)
-				break <- EncoderResult(preferences.lineBreak(InBetween(body), elem))
+				separator <- separator.encode(())
+				break <- preferences.lineBreak(InBetween(body), elem)
 				body <- body.encode(elem, level)
-			} yield previous ++ separator ++ break ++ body
+			} yield previous ++ separator.dropReferences ++ break ++ body
 		}
 }
 
@@ -107,9 +106,9 @@ class EncoderPreferences(
 	tabulationSize: Int,
 	lineBreaks: Map[Location, Int],
 	val tabulationLevelIncrements: Map[Location, Int]) {
-	def space[T](location: Location, target: T) = spacing.collectFirst{ case l: Location if l.matches(location, target) => " " } getOrElse ""
-	def lineBreak[T](location: Location, target: T) = "\n" * lineBreaks.collect{ case (l: Location, count) if l.matches(location, target) => count }.sum
-	def tabulation(level: Int) = tabulationSequence * tabulationSize * level
+	def space[T](location: Location, target: T) = EncoderResult(spacing.collectFirst{ case l: Location if l.matches(location, target) => " " } getOrElse "")
+	def lineBreak[T](location: Location, target: T) = EncoderResult("\n" * lineBreaks.collect{ case (l: Location, count) if l.matches(location, target) => count }.sum)
+	def tabulation(level: Int) = EncoderResult(tabulationSequence * tabulationSize * level)
 }
 
 trait Location {

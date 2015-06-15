@@ -1,8 +1,6 @@
 package org.uqbar.thin.encoding
 
-import java.util.IdentityHashMap
-
-import scala.collection.JavaConversions.asScalaSet
+import scala.language.implicitConversions
 import scala.util.Try
 
 import org.uqbar.utils.collections.immutable.IdentityMap
@@ -11,6 +9,8 @@ package object combinator {
 	type EncoderResult = Try[(String, IdentityMap[Any, Range])]
 
 	def EncoderResult(text: String = "", references: IdentityMap[Any, Range] = IdentityMap()): EncoderResult = Try(text, references)
+
+	implicit def StringToEncoderResult(s: String) = EncoderResult(s)
 
 	implicit class ExtendedEncoderResult(r: (String, IdentityMap[Any, Range])) {
 		implicit class ExtendedIdentityMap(m: IdentityMap[Any, Range]) {
@@ -25,6 +25,8 @@ package object combinator {
 			val end = r._1.size - fillingCount(r._1.reverseIterator)
 			(r._1, r._2 + (target, start until end))
 		}
+
+		def dropReferences = r.copy(_2 = IdentityMap[Any, Range]())
 	}
 
 }

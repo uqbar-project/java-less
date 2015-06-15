@@ -19,7 +19,12 @@ package object combinator {
 
 		def ++(other: (String, IdentityMap[Any, Range])): (String, IdentityMap[Any, Range]) = (r._1 + other._1, other._2.shifted(r._1.size) ++ r._2)
 
-		def referencing(target: Any): (String, IdentityMap[Any, Range]) = (r._1, r._2 + (target, 0.until(r._1.size)))
+		def referencing(target: Any): (String, IdentityMap[Any, Range]) = {
+			def fillingCount(s: Iterator[_]) = s.takeWhile(" \t\n".contains(_)).size
+			val start = fillingCount(r._1.iterator)
+			val end = r._1.size - fillingCount(r._1.reverseIterator)
+			(r._1, r._2 + (target, start until end))
+		}
 	}
 
 }

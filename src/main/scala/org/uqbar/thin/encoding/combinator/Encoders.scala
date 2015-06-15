@@ -42,7 +42,7 @@ abstract class Encoder[-T] {
 		content <- doEncode(target, level + preferences.tabulationLevelIncrements(InBetween(this)))
 		afterLineBreaks <- EncoderResult(preferences.lineBreak(After(this), target))
 		afterSpace <- EncoderResult(preferences.space(After(this), target))
-	} yield beforeLineBreaks ++ beforeSpace ++ content ++ afterLineBreaks ++ afterSpace
+	} yield beforeLineBreaks ++ beforeSpace ++ (content referencing target) ++ afterLineBreaks ++ afterSpace
 
 	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]): EncoderResult
 
@@ -57,24 +57,24 @@ case object Empty extends Encoder[Any] {
 }
 
 case object & extends Encoder[Any] {
-	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(EncoderResult(target.toString).map(_ referencing target), level)
+	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(EncoderResult(target.toString), level)
 }
 
 case class Constant(terminal: Symbol) extends Encoder[Any] {
-	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(EncoderResult(terminals(terminal)).map(_ referencing target), level)
+	protected def doEncode(target: Any, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(EncoderResult(terminals(terminal)), level)
 }
 
 case class Append[T](left: Encoder[T], right: Encoder[T]) extends Encoder[T] {
 	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = tabulate(for {
 		previous <- left.encode(target)
 		next <- right.encode(target)
-	} yield previous ++ next referencing target, level)
+	} yield previous ++ next, level)
 }
 
 case class Transform[T, S](before: Encoder[S])(f: T => S) extends Encoder[T] {
 	protected def doEncode(target: T, level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) = for {
-		(nextText, nextReferences) <- before.encode(f(target), level)
-	} yield (nextText, nextReferences.updated(target, nextReferences(f(target))).asInstanceOf[IdentityMap[Any,Range]])
+		next <- before.encode(f(target), level)
+	} yield next
 }
 
 case class Or[T, -L <: T, -R <: T](left: Encoder[L], right: Encoder[R]) extends Encoder[T] {
@@ -85,7 +85,7 @@ case class Or[T, -L <: T, -R <: T](left: Encoder[L], right: Encoder[R]) extends 
 
 case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encoder[List[T]] {
 	protected def doEncode(target: List[T], level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol,String]) =
-		(if (target.isEmpty) EncoderResult()
+		if (target.isEmpty) EncoderResult()
 		else (body.encode(target.head, level) /: target.tail){ (previous, elem) =>
 			for {
 				previous <- previous
@@ -94,7 +94,7 @@ case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encode
 				break <- EncoderResult(preferences.lineBreak(InBetween(body), elem))
 				body <- body.encode(elem, level)
 			} yield previous ++ separator ++ break ++ body
-		}).map(_ referencing target)
+		}
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀

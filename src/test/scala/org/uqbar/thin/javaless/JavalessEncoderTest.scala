@@ -31,7 +31,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 						class MyClass {
 							calculate() {}
 						}
-					""")(nonEmptyClass -> 0.to(32), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(30), emptyMethod -> 17.to(30), emptyMethod.name -> 17.to(25), Nil -> 26.to(27))
+					""")(nonEmptyClass -> 0.to(32), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 17.to(30), emptyMethod -> 17.to(30), emptyMethod.name -> 17.to(25), Nil -> 26.to(27))
 				}
 
 				"with two method definitions" in {
@@ -45,7 +45,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 							recalculate() {}
 						}
-					""")(nonEmptyClass -> 0.to(51), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(49), emptyMethod1 -> 17.to(30), emptyMethod1.name -> 17.to(25), emptyMethod2 -> 34.to(49), emptyMethod2.name -> 34.to(44), Nil -> 26.to(27))
+					""")(nonEmptyClass -> 0.to(51), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 17.to(49), emptyMethod1 -> 17.to(30), emptyMethod1.name -> 17.to(25), emptyMethod2 -> 34.to(49), emptyMethod2.name -> 34.to(44), Nil -> 26.to(27))
 				}
 
 				"with a field definition" in {
@@ -56,7 +56,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 						class MyClass {
 							foo
 						}
-					""")(nonEmptyClass -> 0.to(21), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(19), field -> 17.to(19), field.name -> 17.to(19))
+					""")(nonEmptyClass -> 0.to(21), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 17.to(19), field -> 17.to(19), field.name -> 17.to(19))
 				}
 
 				"with three field definition" in {
@@ -73,7 +73,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 							meh
 						}
-					""")(nonEmptyClass -> 0.to(33), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(31), field1 -> 17.to(19), field1.name -> 17.to(19), field2 -> 23.to(25), field2.name -> 23.to(25), field3 -> 29.to(31), field3.name -> 29.to(31))
+					""")(nonEmptyClass -> 0.to(33), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 17.to(31), field1 -> 17.to(19), field1.name -> 17.to(19), field2 -> 23.to(25), field2.name -> 23.to(25), field3 -> 29.to(31), field3.name -> 29.to(31))
 				}
 				
 				"with fields and methods" in {
@@ -96,7 +96,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 							recalculate() {}
 						}
-					""")(nonEmptyClass -> 0.to(69), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 16.to(67), field1 -> 17.to(19), field1.name -> 17.to(19), field2 -> 23.to(25), field2.name -> 23.to(25), field3 -> 29.to(31), field3.name -> 29.to(31), emptyMethod1 -> 35.to(48), emptyMethod1.name -> 35.to(43), emptyMethod2 -> 52.to(67), emptyMethod2.name -> 52.to(62), Nil -> 44.to(45))
+					""")(nonEmptyClass -> 0.to(69), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 17.to(67), field1 -> 17.to(19), field1.name -> 17.to(19), field2 -> 23.to(25), field2.name -> 23.to(25), field3 -> 29.to(31), field3.name -> 29.to(31), emptyMethod1 -> 35.to(48), emptyMethod1.name -> 35.to(43), emptyMethod2 -> 52.to(67), emptyMethod2.name -> 52.to(62), Nil -> 44.to(45))
 				}
 			}
 

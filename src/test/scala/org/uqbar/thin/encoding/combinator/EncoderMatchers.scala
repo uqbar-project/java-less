@@ -2,19 +2,18 @@ package org.uqbar.thin.encoding.combinator
 
 import java.io.PrintWriter
 import java.io.StringWriter
-
 import scala.language.implicitConversions
 import scala.util.Failure
 import scala.util.Success
-
 import org.scalatest.Matchers
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
+import scala.util.Try
 
 trait EncoderMatchers extends Matchers {
 
-	protected case class resultIn(tabulatedExpectedText: String, expectedPending: List[Any] = Nil)(expectedReferencesSeq: (Any, Range)*) extends Matcher[EncoderResult] {
-		def apply(target: EncoderResult) = target.matches(tabulatedExpectedText, expectedReferencesSeq.toMap)
+	protected case class resultIn(tabulatedExpectedText: String, expectedPending: List[Any] = Nil)(expectedReferencesSeq: (Any, Range)*) extends Matcher[Try[EncoderResult]] {
+		def apply(target: Try[EncoderResult]) = target.matches(tabulatedExpectedText, expectedReferencesSeq.toMap)
 	}
 
 	case class beEncodedTo[T](tabulatedExpectedText: String)(expectedReferencesSeq: (Any, Range)*)(implicit encoder: Encoder[T], preferences: EncoderPreferences, terminals: Map[Symbol, String]) extends Matcher[T] {
@@ -33,7 +32,7 @@ trait EncoderMatchers extends Matchers {
 		}
 	}
 
-	protected implicit class EncoderResultExt(target: EncoderResult) {
+	protected implicit class EncoderResultExt(target: Try[EncoderResult]) {
 		def matches(tabulatedExpectedText: String, expectedReferences: Map[Any, Range]) = {
 
 			val unwantedTabulation = """^\n?([\t| ]*)[^\$]*""".r.unapplySeq(tabulatedExpectedText).fold("")(_.head)
@@ -48,8 +47,8 @@ trait EncoderMatchers extends Matchers {
 			}.map(_._1).mkString("\n")
 
 			val (success, message) = target match {
-				case Success((text, _)) if text != expectedText => false -> s"Encoded text: ${pretty(text)} did not match expected text: ${pretty(expectedText)}"
-				case Success((_, references)) =>
+				case Success(EncoderResult(text, _)) if text != expectedText => false -> s"Encoded text: ${pretty(text)} did not match expected text: ${pretty(expectedText)}"
+				case Success(EncoderResult(_, references)) =>
 					val unexpectedReferences = references.filterNot(expectedReferences isDefinedAt _._1)
 					val missedReferences = expectedReferences.filterNot(references isDefinedAt _._1)
 					val wrongReferences = references.filter{ case (key, value) => expectedReferences.get(key).exists(_ != value) }

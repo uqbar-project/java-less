@@ -13,7 +13,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 	"Javaless encoding" - {
 
 		"should succeed" - {
-			
+
 			"for classes" - {
 				implicit val encoder = classDefinition
 
@@ -63,7 +63,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 					val field1 = Field("foo")
 					val field2 = Field("bar")
 					val field3 = Field("meh")
-					val nonEmptyClass = Class("MyClass", List(field1,field2,field3))
+					val nonEmptyClass = Class("MyClass", List(field1, field2, field3))
 
 					nonEmptyClass should beEncodedTo("""
 						class MyClass {
@@ -75,7 +75,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 						}
 					""")(nonEmptyClass -> 0.to(33), nonEmptyClass.name -> 6.to(12), nonEmptyClass.body -> 17.to(31), field1 -> 17.to(19), field1.name -> 17.to(19), field2 -> 23.to(25), field2.name -> 23.to(25), field3 -> 29.to(31), field3.name -> 29.to(31))
 				}
-				
+
 				"with fields and methods" in {
 					val field1 = Field("foo")
 					val field2 = Field("bar")
@@ -121,6 +121,8 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 					argumentedEmptyMethod should beEncodedTo("calculate(arg1, arg2) {}")(argumentedEmptyMethod -> 0.to(23), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(20), "arg1" -> 10.to(13), "arg2" -> 16.to(19))
 				}
 
+				"with a literal int as body" in ???
+				
 			}
 
 			"for fields" - {
@@ -130,6 +132,25 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 					val field = Field("foo")
 
 					field should beEncodedTo("foo")(field -> 0.to(2), field.name -> 0.to(2))
+				}
+
+			}
+
+			"for sentences" - {
+
+				"for expressions" - {
+
+					"for literals" - {
+
+						"for int literals" - {
+							"for zero" in ???
+							"for negative zero" in ???
+							"for negatives" in ???
+							"for positives" in ???
+						}
+
+					}
+
 				}
 
 			}

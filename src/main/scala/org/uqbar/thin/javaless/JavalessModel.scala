@@ -11,3 +11,7 @@ case class Method(name: Identifier, arguments: List[Identifier],  body: List[Sen
 case class Field(name: Identifier) extends ClassMember
 
 sealed trait Sentence
+sealed trait Expression
+
+sealed trait Literal extends Expression
+case class IntLiteral(value: Int) extends Literal

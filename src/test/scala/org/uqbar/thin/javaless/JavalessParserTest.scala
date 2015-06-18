@@ -49,6 +49,8 @@ class JavalessParserTest extends FreeSpec with ParserTest[JavalessParserDefiniti
     	"with three arguments" in {
     		"calculate(x,y,z){}" should beParsedTo(Method("calculate","x"::"y"::"z"::Nil,Nil))
     	}
+    	
+    	"with a literal int as body" in ???
     }
     
     "fields" - {
@@ -59,6 +61,32 @@ class JavalessParserTest extends FreeSpec with ParserTest[JavalessParserDefiniti
     	}
     }
 
+    "sentences" - {
+    	
+    	"expressions" - {
+    	
+    		"literals" - {
+    		
+    			"int literals" - {
+    				
+    				"should succeed" - {
+    					"for zero" in ???
+    					"for negative zero" in ???
+    					"for negatives" in ???
+    					"for positives" in ???
+    				}
+    				"should fail" - {
+    					"for negatives smaller than min int" in ???
+    					"for positives larger than max int" in ???
+    				}
+    				
+    			}
+    			
+    		}
+    		
+    	}
+    	
+    }
   }
 
 }

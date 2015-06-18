@@ -78,6 +78,8 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 				importedBarMethod should have ('name("bar"))
 				importedBarMethod.getParameters should have length 2
 			}
+			
+			"for a class with methods with int literals as bodies" in ???
 
 			"for a class with fields" in {
 				val target = Class("MyClass", List(

@@ -94,6 +94,8 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 				importedClass.getDeclaredField("foo") should have ('name("foo"))
 				importedClass.getDeclaredField("bar") should have ('name("bar"))
 			}
+			
+			"for a class with methods with string literals as body" in ???
 
 		}
 	}

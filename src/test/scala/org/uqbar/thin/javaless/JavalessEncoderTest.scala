@@ -120,9 +120,29 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 					argumentedEmptyMethod should beEncodedTo("calculate(arg1, arg2) {}")(argumentedEmptyMethod -> 0.to(23), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(20), "arg1" -> 10.to(13), "arg2" -> 16.to(19))
 				}
+				
+				"with string literals as body" in ???
 
 			}
 
+			"for sentences" - {
+
+				"for expressions" - {
+
+					"for literals" - {
+
+						"for string literals" - {
+							"for empty string" in ???
+							"for non empty string" in ???
+							"for non empty string containing the string delimiter literal" in ???
+						}
+
+					}
+
+				}
+
+			}
+			
 			"for fields" - {
 				implicit val encoder = fieldDefinition
 

@@ -11,3 +11,5 @@ case class Method(name: Identifier, arguments: List[Identifier],  body: List[Sen
 case class Field(name: Identifier) extends ClassMember
 
 sealed trait Sentence
+sealed trait Expression
+case class Message(target: Expression, arguments: List[Expression]) extends Sentence with Expression

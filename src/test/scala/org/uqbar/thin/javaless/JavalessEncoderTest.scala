@@ -121,6 +121,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 					argumentedEmptyMethod should beEncodedTo("calculate(arg1, arg2) {}")(argumentedEmptyMethod -> 0.to(23), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(20), "arg1" -> 10.to(13), "arg2" -> 16.to(19))
 				}
 
+				"with a body" in ???
 			}
 
 			"for fields" - {
@@ -132,6 +133,23 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 					field should beEncodedTo("foo")(field -> 0.to(2), field.name -> 0.to(2))
 				}
 
+			}
+			
+			"for sentences" - {
+
+				"for expressions" - {
+					
+					"for messages" - {
+						
+						"to a simple receiver ẅith no arguments" in ???
+						"to a simple receiver with one simple argument" in ???
+						"to a simple receiver with three simple arguments" in ???
+						"to a simple receiver with three message chains as arguments" in ???
+						"to a message chain result with three message chains as arguments" in ???
+					}
+					
+				}
+				
 			}
 
 		}

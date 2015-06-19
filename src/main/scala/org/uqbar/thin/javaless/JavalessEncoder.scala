@@ -50,6 +50,8 @@ trait JavalessEncoderDefinition extends Encoders {
 
 		tabulationLevelIncrements = Map(
 			On(classMember.*)() -> 1
-		)
+		),
+		
+		sortOrders = Set()
 	)
 }

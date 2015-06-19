@@ -160,7 +160,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 					${9}calculate${10}(${11}) {}${12}
 
-					${13}recalculate${14}() {}${15} 
+					${13}recalculate${14}() {}${15}
 				}${16}
 			"""(nonEmptyClass -> 0.until(16), nonEmptyClass.name -> 1.until(2), nonEmptyClass.body -> 3.until(15), field1 -> 3.until(4), field1.name -> 3.until(4), field2 -> 5.until(6), field2.name -> 5.until(6), field3 -> 7.until(8), field3.name -> 7.until(8), emptyMethod1 -> 9.until(12), emptyMethod1.name -> 9.until(10), Nil -> 10.to(11), emptyMethod2 -> 13.until(15), emptyMethod2.name -> 13.until(14))
 		}

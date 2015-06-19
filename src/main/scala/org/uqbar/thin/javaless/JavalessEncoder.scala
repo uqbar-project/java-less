@@ -10,10 +10,7 @@ import org.uqbar.thin.encoding.combinator.Encoders
 import org.uqbar.thin.encoding.combinator.InBetween
 import org.uqbar.thin.encoding.combinator.Location
 import org.uqbar.thin.encoding.combinator.On
-import org.uqbar.thin.encoding.combinator.SimpleLocationRule
-import org.uqbar.thin.encoding.combinator.InfixLocationRule
 import org.uqbar.thin.encoding.combinator.LocationRule
-import org.uqbar.thin.encoding.combinator.SimpleLocationRule
 
 class JavalessEncoder(_terminals: => Map[Symbol, String] = DefaultTerminals, _preferences: => EncoderPreferences = null) extends JavalessEncoderDefinition {
 	def terminals = _terminals
@@ -45,10 +42,9 @@ trait JavalessEncoderDefinition extends Encoders {
 		tabulationSequence = "\t",
 
 		tabulationSize = 1,
-
 		lineBreaks = Map(
-			Before(classMember.*){_.nonEmpty } -> 1,
-			After(classMember.*){ _.nonEmpty } -> 1,
+			Before(classMember.*){case _::_ => true} -> 1,
+			After(classMember.*){case _::_ => true } -> 1,
 			InBetween(classMember.*){case (_,r: Method,_) => true} -> 2
 		),
 

@@ -38,15 +38,15 @@ trait Encoders {
 
 abstract class Encoder[-T] {
 	def encode(target: T, level: Int = 0)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = for {
-		content <- doEncode(target, level + preferences.tabulationLevelIncrement(On(this)(target)))
+		content <- doEncode(target, level + preferences.tabulationLevelIncrement(On(this) on target))
 	} yield formated(content referencing target, target)
 
 	protected def formated(result: EncoderResult, target: T)(implicit preferences: EncoderPreferences) =
-		preferences.lineBreak(After(this)(target)) ++
-			preferences.space(Before(this)(target)) ++
+		preferences.lineBreak(After(this) on target) ++
+			preferences.space(Before(this) on target) ++
 			result ++
-			preferences.lineBreak(After(this)(target)) ++
-			preferences.space(After(this)(target))
+			preferences.lineBreak(After(this) on target) ++
+			preferences.space(After(this) on target)
 
 	protected def tabulate(target: EncoderResult, level: Int)(implicit preferences: EncoderPreferences): EncoderResult = preferences.tabulation(level) ++ target
 
@@ -93,7 +93,7 @@ case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encode
 					previous <- previous
 					separator <- separator.encode(())
 					elemBody <- body.encode(elem, level)
-				} yield previous ++ separator.dropReferences ++ preferences.lineBreak(InBetween(this)(previousElem, elem, target)) ++ elemBody, elem)
+				} yield previous ++ separator.dropReferences ++ preferences.lineBreak(InBetween(this) on (previousElem, elem, target)) ++ elemBody, elem)
 		}._1
 	}
 }
@@ -103,44 +103,33 @@ case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encode
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
 class EncoderPreferences(
-	spacing: Set[LocationRule[_]],
+	spacing: Set[LocationRule[Any]],
 	tabulationSequence: String,
 	tabulationSize: Int,
-	lineBreaks: Map[LocationRule[_], Int],
-	tabulationLevelIncrements: Map[LocationRule[_], Int]) {
-	def tabulationLevelIncrement[T](locationKey: LocationKey[T]) = tabulationLevelIncrements.collectFirst{ case (l: LocationRule[T], i) if l.matches(locationKey) => i } getOrElse 0
-	def space[T](locationKey: LocationKey[T]) = spacing.collectFirst{ case l: LocationRule[T] if l.matches(locationKey) => " " } getOrElse ""
-	def lineBreak[T](locationKey: LocationKey[T]) = "\n" * lineBreaks.collect{ case (l: LocationRule[T], count) if l.matches(locationKey) => count }.sum
+	lineBreaks: Map[LocationRule[Any], Int],
+	tabulationLevelIncrements: Map[LocationRule[Any], Int]) {
+	def tabulationLevelIncrement(locationKey: LocationKey[_]) = tabulationLevelIncrements.collectFirst{ case (l, i) if l.matches(locationKey) => i } getOrElse 0
+	def space(locationKey: LocationKey[_]) = spacing.collectFirst{ case l if l.matches(locationKey) => " " } getOrElse ""
+	def lineBreak(locationKey: LocationKey[_]) = "\n" * lineBreaks.collect{ case (l, count) if l.matches(locationKey) => count }.sum
 	def tabulation(level: Int) = tabulationSequence * tabulationSize * level
 }
 
-trait Location[T]
-trait SimpleLocation[T] extends Location[T] {
-	def apply(target: T) = SimpleLocationKey(this, target)
-	def apply(condition: T => Boolean = null) = SimpleLocationRule(this)(Option(condition))
+trait Location[+T] {
+	def on[U>:T](target: U) = LocationKey(this, target)
+	def apply(condition: PartialFunction[Any, Boolean] = null) = LocationRule(this)(Option(condition))
 }
-case class After[T](target: Encoder[T]) extends SimpleLocation[T]
-case class Before[T](target: Encoder[T]) extends SimpleLocation[T]
-case class On[T](target: Encoder[T]) extends SimpleLocation[T]
-case class InBetween[T](target: Encoder[List[T]]) extends Location[List[T]] {
-	def apply(left: T, right: T, context: List[T]) = InfixLocationKey(this, left, right, context)
-	def apply(condition: PartialFunction[(T,T,List[T]), Boolean] = null) = InfixLocationRule(this)(Option(condition))
-}
+case class After[T](target: Encoder[T]) extends Location[T]
+case class Before[T](target: Encoder[T]) extends Location[T]
+case class On[T](target: Encoder[T]) extends Location[T]
+case class InBetween[T](target: Encoder[List[T]]) extends Location[(T,T,List[T])]
 
-protected trait LocationKey[T]
-protected case class SimpleLocationKey[T](location: Location[T], target: T) extends LocationKey[T]
-protected case class InfixLocationKey[T](location: Location[List[T]], left: T, right: T, context: List[T]) extends LocationKey[List[T]]
-
-protected trait LocationRule[T] { def matches(key: LocationKey[T]): Boolean }
-protected case class SimpleLocationRule[T](location: Location[T])(condition: Option[T => Boolean] = None) extends LocationRule[T] {
-	def matches(key: LocationKey[T]) = Option(key).
-		collect{ case SimpleLocationKey(`location`, target) => target }.
-		exists{ target => condition.forall{ _(target) } }
-}
-protected case class InfixLocationRule[T](location: Location[List[T]])(condition: Option[PartialFunction[(T, T, List[T]), Boolean]]) extends LocationRule[T] {
-	def matches(key: LocationKey[T]) = Option(key).
-		collect{ case key: InfixLocationKey[T] if key.location == location => (key.left, key.right, key.context) }.
-		exists{ case (left,right, context) => condition.forall{ _.applyOrElse[(T,T,List[T]),Boolean]((left,right,context),{_ => false}) } }
+protected case class LocationKey[+T](val location: Location[T], val target: T)
+  
+protected case class LocationRule[+T](location: Location[T])(condition: Option[PartialFunction[Any,Boolean]]) {
+	def matches[U>:T](key: LocationKey[U]) = {
+		key.location == location && condition.forall{ condition => condition.applyOrElse(key.target, {_: Any => false})
+		}
+	}
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀

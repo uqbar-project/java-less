@@ -13,6 +13,7 @@ import org.uqbar.thin.encoding.combinator.On
 import org.uqbar.thin.encoding.combinator.SimpleLocationRule
 import org.uqbar.thin.encoding.combinator.InfixLocationRule
 import org.uqbar.thin.encoding.combinator.LocationRule
+import org.uqbar.thin.encoding.combinator.SimpleLocationRule
 
 class JavalessEncoder(_terminals: => Map[Symbol, String] = DefaultTerminals, _preferences: => EncoderPreferences = null) extends JavalessEncoderDefinition {
 	def terminals = _terminals
@@ -35,10 +36,10 @@ trait JavalessEncoderDefinition extends Encoders {
 
 	lazy val DefaultPreferences = new EncoderPreferences(
 		spacing = Set(
-			SimpleLocationRule(After('class))(),
-			SimpleLocationRule(After('argumentSeparator))(),
-			SimpleLocationRule(Before('contextOpen))(),
-			InfixLocationRule(InBetween(classMember.*)){case (l: Field,r: Field,_) => true}
+			After('class)(),
+			After('argumentSeparator)(),
+			Before('contextOpen)(),
+			InBetween(classMember.*){case (l: Field,r: Field,_) => true}
 		),
 
 		tabulationSequence = "\t",
@@ -46,13 +47,13 @@ trait JavalessEncoderDefinition extends Encoders {
 		tabulationSize = 1,
 
 		lineBreaks = Map(
-			SimpleLocationRule(Before(classMember.*)){ case l: List[_] => l.nonEmpty } -> 1,
-			SimpleLocationRule(After(classMember.*)){ case l: List[_] => l.nonEmpty } -> 1,
-			InfixLocationRule(InBetween(classMember.*)){case (_,r: Method,_) => true} -> 2
+			Before(classMember.*){_.nonEmpty } -> 1,
+			After(classMember.*){ _.nonEmpty } -> 1,
+			InBetween(classMember.*){case (_,r: Method,_) => true} -> 2
 		),
 
 		tabulationLevelIncrements = Map(
-			SimpleLocationRule(On(classMember.*))() -> 1
+			On(classMember.*)() -> 1
 		)
 	)
 }

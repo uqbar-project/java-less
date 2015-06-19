@@ -38,15 +38,15 @@ trait Encoders {
 
 abstract class Encoder[-T] {
 	def encode(target: T, level: Int = 0)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = for {
-		content <- doEncode(target, level + preferences.tabulationLevelIncrement(SimpleLocationKey(On(this), target)))
+		content <- doEncode(target, level + preferences.tabulationLevelIncrement(On(this)(target)))
 	} yield formated(content referencing target, target)
 
 	protected def formated(result: EncoderResult, target: T)(implicit preferences: EncoderPreferences) =
-		preferences.lineBreak(SimpleLocationKey(After(this), target)) ++
-			preferences.space(SimpleLocationKey(Before(this), target)) ++
+		preferences.lineBreak(After(this)(target)) ++
+			preferences.space(Before(this)(target)) ++
 			result ++
-			preferences.lineBreak(SimpleLocationKey(After(this), target)) ++
-			preferences.space(SimpleLocationKey(After(this), target))
+			preferences.lineBreak(After(this)(target)) ++
+			preferences.space(After(this)(target))
 
 	protected def tabulate(target: EncoderResult, level: Int)(implicit preferences: EncoderPreferences): EncoderResult = preferences.tabulation(level) ++ target
 
@@ -93,7 +93,7 @@ case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encode
 					previous <- previous
 					separator <- separator.encode(())
 					elemBody <- body.encode(elem, level)
-				} yield previous ++ separator.dropReferences ++ preferences.lineBreak(InfixLocationKey(InBetween(this), previousElem, elem, target)) ++ elemBody, elem)
+				} yield previous ++ separator.dropReferences ++ preferences.lineBreak(InBetween(this)(previousElem, elem, target)) ++ elemBody, elem)
 		}._1
 	}
 }
@@ -115,27 +115,32 @@ class EncoderPreferences(
 }
 
 trait Location[T]
-case class After[T](target: Encoder[T]) extends Location[T]
-case class Before[T](target: Encoder[T]) extends Location[T]
-case class On[T](target: Encoder[T]) extends Location[T]
-case class InBetween[T](target: Encoder[List[T]]) extends Location[List[T]]
+trait SimpleLocation[T] extends Location[T] {
+	def apply(target: T) = SimpleLocationKey(this, target)
+	def apply(condition: T => Boolean = null) = SimpleLocationRule(this)(Option(condition))
+}
+case class After[T](target: Encoder[T]) extends SimpleLocation[T]
+case class Before[T](target: Encoder[T]) extends SimpleLocation[T]
+case class On[T](target: Encoder[T]) extends SimpleLocation[T]
+case class InBetween[T](target: Encoder[List[T]]) extends Location[List[T]] {
+	def apply(left: T, right: T, context: List[T]) = InfixLocationKey(this, left, right, context)
+	def apply(condition: PartialFunction[(T,T,List[T]), Boolean] = null) = InfixLocationRule(this)(Option(condition))
+}
 
-trait LocationKey[T]
-case class SimpleLocationKey[T](location: Location[T], target: T) extends LocationKey[T]
-case class InfixLocationKey[T](location: Location[List[T]], left: T, right: T, context: List[T]) extends LocationKey[List[T]]
+protected trait LocationKey[T]
+protected case class SimpleLocationKey[T](location: Location[T], target: T) extends LocationKey[T]
+protected case class InfixLocationKey[T](location: Location[List[T]], left: T, right: T, context: List[T]) extends LocationKey[List[T]]
 
-trait LocationRule[T] { def matches(key: LocationKey[T]): Boolean }
-case class SimpleLocationRule[T](location: Location[T])(_condition: PartialFunction[T, Boolean] = null) extends LocationRule[T] {
-	val condition = Option(_condition)
+protected trait LocationRule[T] { def matches(key: LocationKey[T]): Boolean }
+protected case class SimpleLocationRule[T](location: Location[T])(condition: Option[T => Boolean] = None) extends LocationRule[T] {
 	def matches(key: LocationKey[T]) = Option(key).
 		collect{ case SimpleLocationKey(`location`, target) => target }.
-		exists{ target => condition.forall{ condition => condition.isDefinedAt(target) && condition(target) } }
+		exists{ target => condition.forall{ _(target) } }
 }
-case class InfixLocationRule[T](location: Location[List[T]])(_condition: PartialFunction[(T, T, List[T]), Boolean] = null) extends LocationRule[T] {
-	val condition = Option(_condition)
+protected case class InfixLocationRule[T](location: Location[List[T]])(condition: Option[PartialFunction[(T, T, List[T]), Boolean]]) extends LocationRule[T] {
 	def matches(key: LocationKey[T]) = Option(key).
-		collect{ case key: InfixLocationKey[T] if key.location == location => (key.left,key.right,key.context) }.
-		exists{ target => condition.forall{ condition => condition.isDefinedAt(target) && condition(target) } }
+		collect{ case key: InfixLocationKey[T] if key.location == location => (key.left, key.right, key.context) }.
+		exists{ case (left,right, context) => condition.forall{ _.applyOrElse[(T,T,List[T]),Boolean]((left,right,context),{_ => false}) } }
 }
 
 //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀

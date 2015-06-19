@@ -124,7 +124,7 @@ case class On[T](target: Encoder[T]) extends Location[T]
 case class InBetween[T](target: Encoder[List[T]]) extends Location[(T,T,List[T])]
 
 protected case class LocationKey[+T](val location: Location[T], val target: T)
-  
+
 protected case class LocationRule[+T](location: Location[T])(condition: Option[PartialFunction[Any,Boolean]]) {
 	def matches[U>:T](key: LocationKey[U]) = {
 		key.location == location && condition.forall{ condition => condition.applyOrElse(key.target, {_: Any => false})

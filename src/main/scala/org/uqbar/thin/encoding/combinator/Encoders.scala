@@ -126,11 +126,14 @@ case class ConditionalLocation(location: Location)(val condition: PartialFunctio
 
 case class EncoderResult(text: String = "", references: IdentityMap[Any, Range] = IdentityMap()) {
 	implicit class ExtendedIdentityMap(m: IdentityMap[Any, Range]) {
-		def shifted(n: Int): IdentityMap[Any, Range] = m.map{ case (k, v) => k -> (v.start + n until v.end + n) }
 	}
 
 	def ++(text: String): EncoderResult = this ++ EncoderResult(text)
-	def ++(other: EncoderResult) = EncoderResult(text + other.text, other.references.shifted(text.size) ++ references)
+	def ++(other: EncoderResult) = {
+		def shifted(m: IdentityMap[Any, Range], n: Int): IdentityMap[Any, Range] = m.map{ case (k, v) => (k, if(v.isInclusive) v.start + n to v.end + n else v.start + n until v.end + n) }
+		
+		EncoderResult(text + other.text, shifted(other.references, text.size) ++ references)
+	}
 
 	def referencing(target: Any) = {
 		def fillingCount(s: Iterator[_]) = s.takeWhile(" \t\n".contains(_)).size

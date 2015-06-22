@@ -1,16 +1,16 @@
 package org.uqbar.thin.javaless
 
 import scala.language.implicitConversions
-
 import org.uqbar.thin.encoding.combinator.{& => &}
 import org.uqbar.thin.encoding.combinator.After
 import org.uqbar.thin.encoding.combinator.Before
-import org.uqbar.thin.encoding.combinator.ConditionalLocation
 import org.uqbar.thin.encoding.combinator.Encoder
 import org.uqbar.thin.encoding.combinator.EncoderPreferences
 import org.uqbar.thin.encoding.combinator.Encoders
 import org.uqbar.thin.encoding.combinator.InBetween
 import org.uqbar.thin.encoding.combinator.Location
+import org.uqbar.thin.encoding.combinator.On
+import org.uqbar.thin.encoding.combinator.LocationRule
 
 class JavalessEncoder(_terminals: => Map[Symbol, String] = DefaultTerminals, _preferences: => EncoderPreferences = null) extends JavalessEncoderDefinition {
 	def terminals = _terminals
@@ -33,23 +33,23 @@ trait JavalessEncoderDefinition extends Encoders {
 
 	lazy val DefaultPreferences = new EncoderPreferences(
 		spacing = Set(
-			After('class),
-			After('argumentSeparator),
-			Before('contextOpen)
+			After('class)(),
+			After('argumentSeparator)(),
+			Before('contextOpen)(),
+			InBetween(classMember.*){case (l: Field,r: Field,_) => true}
 		),
 
 		tabulationSequence = "\t",
 
 		tabulationSize = 1,
+		lineBreaks = Map(
+			Before(classMember.*){case _::_ => true} -> 1,
+			After(classMember.*){case _::_ => true } -> 1,
+			InBetween(classMember.*){case (_,r: Method,_) => true} -> 2
+		),
 
-		lineBreaks = Map[Location, Int](
-			ConditionalLocation(Before(classMember.*)){ case l: List[_] => l.nonEmpty } -> 1,
-			ConditionalLocation(After(classMember.*)){ case l: List[_] => l.nonEmpty } -> 1,
-			InBetween(classMember) -> 2
-		).withDefaultValue(0),
-
-		tabulationLevelIncrements = Map[Location, Int](
-			InBetween(classMember.*) -> 1
-		).withDefaultValue(0)
+		tabulationLevelIncrements = Map(
+			On(classMember.*)() -> 1
+		)
 	)
 }

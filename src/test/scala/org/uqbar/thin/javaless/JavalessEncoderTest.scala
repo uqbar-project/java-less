@@ -71,11 +71,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 					nonEmptyClass should beEncodedTo"""
 						${0}class ${1}MyClass${2} {
-							${3}foo${4}
-
-							${5}bar${6}
-
-							${7}meh${8}
+							${3}foo${4}	${5}bar${6}	${7}meh${8}
 						}${9}
 					"""(nonEmptyClass -> 0.until(9), nonEmptyClass.name -> 1.until(2), nonEmptyClass.body -> 3.until(8), field1 -> 3.until(4), field1.name -> 3.until(4), field2 -> 5.until(6), field2.name -> 5.until(6), field3 -> 7.until(8), field3.name -> 7.until(8))
 				}
@@ -90,11 +86,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 					nonEmptyClass should beEncodedTo"""
 						${0}class ${1}MyClass${2} {
-							${3}foo${4}
-
-							${5}bar${6}
-
-							${7}meh${8}
+							${3}foo${4}	${5}bar${6}	${7}meh${8}
 
 							${9}calculate${10}(${11}) {}${12}
 

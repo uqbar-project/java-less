@@ -10,7 +10,7 @@ sealed trait ClassMember extends SyntaxElement
 case class Method(name: Identifier, arguments: List[Identifier],  body: List[Sentence]) extends ClassMember
 case class Field(name: Identifier) extends ClassMember
 
-sealed trait Sentence
-sealed trait Expression
-sealed trait Literal extends Expression
+sealed trait Sentence extends SyntaxElement
+sealed trait Expression extends Sentence
+sealed trait Literal extends Sentence
 case class StringLiteral(value: String) extends Literal

@@ -50,7 +50,10 @@ class JavalessParserTest extends FreeSpec with ParserTest[JavalessParserDefiniti
 				"calculate(x,y,z){}" should beParsedTo(Method("calculate", "x" :: "y" :: "z" :: Nil, Nil))
 			}
 			
-			"with string literals as body" in ???
+			"with string literals as body" in {
+        val literalBeginEnd = "\"\"\""
+        "calculate(x){" + literalBeginEnd + "This is a docBlock" + literalBeginEnd  + "}" should beParsedTo(Method("calculate", "x" :: Nil, List(StringLiteral("\"\"\"This is a docBlock\"\"\""))))   
+      }
 		}
 
 		"fields" - {
@@ -68,9 +71,23 @@ class JavalessParserTest extends FreeSpec with ParserTest[JavalessParserDefiniti
 				"literals" - {
 
 					"string literals" - {
-						"for empty string" in ???
-						"for non empty string" in ???
-						"for non empty string containing the string delimiter literal" in ???
+            val literalBeginEnd = "\"\"\""
+            implicit val parser = stringLiteralType
+						"for empty string" in {
+              literalBeginEnd+literalBeginEnd should beParsedTo(StringLiteral("\"\"\"\"\"\""))
+            }
+						"for non empty string" in {
+              (literalBeginEnd+ "Hello" +literalBeginEnd) should beParsedTo(StringLiteral("\"\"\"Hello\"\"\""))      
+            }
+						"for non empty string containing the string delimiter literal" in 
+            {
+              literalBeginEnd+"\'Hello World\'"+literalBeginEnd should beParsedTo(StringLiteral("\"\"\"\'Hello World\'\"\"\""))       
+            }
+            
+            "for multiline string literal" in 
+            {
+              literalBeginEnd+"Hello\n World\n!"+literalBeginEnd should beParsedTo(StringLiteral("\"\"\"Hello\n World\n!\"\"\""))
+            }
 					}
 
 				}

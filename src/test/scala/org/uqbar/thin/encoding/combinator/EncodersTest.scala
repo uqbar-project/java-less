@@ -19,13 +19,7 @@ class EncodersTest extends FreeSpec with Encoders with EncoderMatchers {
 		': -> ":"
 	)
 
-	implicit val preferences = new EncoderPreferences(
-		spacing = Set(),
-		lineBreaks = Map().withDefaultValue(0),
-		tabulationLevelIncrements = Map().withDefaultValue(0),
-		tabulationSequence = "\t",
-		tabulationSize = 1
-	)
+	implicit val preferences = new EncoderPreferences()
 
 	"Encoder" - {
 
@@ -117,6 +111,15 @@ class EncodersTest extends FreeSpec with Encoders with EncoderMatchers {
 			"should have syntactic sugar for no separator repetition, to be crated from target encoders" in {
 				&.* should be (RepSep(&, Empty))
 			}
+		}
+	}
+	
+	"Preferences" - {
+		"sortOrders should sort" in {
+			implicit val preferences = EncoderPreferences(sortOrders = Set(Order[Char](&.*){ (a,b) => a.isLetter && b.isDigit }))
+			val target = List('1','a','3','b','5')
+			
+			&.* encode (target) should resultIn("ab135")(target-> 0.to(4),'1'->2.to(2),'a'->0.to(0),'3'->3.to(3),'b'->1.to(1),'5'->4.to(4))
 		}
 	}
 }

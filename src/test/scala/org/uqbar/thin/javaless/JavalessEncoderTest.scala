@@ -2,10 +2,10 @@ package org.uqbar.thin.javaless
 
 import scala.language.implicitConversions
 import scala.language.reflectiveCalls
-
 import org.scalatest.Finders
 import org.scalatest.FreeSpec
 import org.uqbar.thin.encoding.combinator.EncoderMatchers
+import org.uqbar.thin.encoding.combinator.Order
 
 class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with EncoderMatchers {
 
@@ -15,7 +15,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 	"Javaless encoding" - {
 
 		"should succeed" - {
-			
+
 			"for classes" - {
 				implicit val encoder = classDefinition
 
@@ -67,7 +67,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 					val field1 = Field("foo")
 					val field2 = Field("bar")
 					val field3 = Field("meh")
-					val nonEmptyClass = Class("MyClass", List(field1,field2,field3))
+					val nonEmptyClass = Class("MyClass", List(field1, field2, field3))
 
 					nonEmptyClass should beEncodedTo"""
 						${0}class ${1}MyClass${2} {
@@ -75,7 +75,7 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 						}${9}
 					"""(nonEmptyClass -> 0.until(9), nonEmptyClass.name -> 1.until(2), nonEmptyClass.body -> 3.until(8), field1 -> 3.until(4), field1.name -> 3.until(4), field2 -> 5.until(6), field2.name -> 5.until(6), field3 -> 7.until(8), field3.name -> 7.until(8))
 				}
-				
+
 				"with fields and methods" in {
 					val field1 = Field("foo")
 					val field2 = Field("bar")
@@ -140,5 +140,29 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
 
 		}
 
+	}
+
+	"preferences" - {
+		"fields should be groupable before methods" in {
+			implicit val preferences = DefaultPreferences.copy(sortOrders = Set(Order(classMember.*){ (a, b) => a.isInstanceOf[Field] && b.isInstanceOf[Method] }))
+			implicit val encoder = classDefinition
+
+			val field1 = Field("foo")
+			val field2 = Field("bar")
+			val field3 = Field("meh")
+			val emptyMethod1 = Method("calculate", Nil, Nil)
+			val emptyMethod2 = Method("recalculate", Nil, Nil)
+			val nonEmptyClass = Class("MyClass", List(field1, emptyMethod1, field2, emptyMethod2, field3))
+
+			nonEmptyClass should beEncodedTo"""
+				${0}class ${1}MyClass${2} {
+					${3}foo${4}	${5}bar${6}	${7}meh${8}
+
+					${9}calculate${10}(${11}) {}${12}
+
+					${13}recalculate${14}() {}${15}
+				}${16}
+			"""(nonEmptyClass -> 0.until(16), nonEmptyClass.name -> 1.until(2), nonEmptyClass.body -> 3.until(15), field1 -> 3.until(4), field1.name -> 3.until(4), field2 -> 5.until(6), field2.name -> 5.until(6), field3 -> 7.until(8), field3.name -> 7.until(8), emptyMethod1 -> 9.until(12), emptyMethod1.name -> 9.until(10), Nil -> 10.to(11), emptyMethod2 -> 13.until(15), emptyMethod2.name -> 13.until(14))
+		}
 	}
 }

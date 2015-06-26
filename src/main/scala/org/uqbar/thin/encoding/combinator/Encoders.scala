@@ -86,14 +86,15 @@ case class Or[T, -L <: T, -R <: T](left: Encoder[L], right: Encoder[R]) extends 
 case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encoder[List[T]] {
 
 	protected def doEncode(target: List[T], level: Int)(implicit preferences: EncoderPreferences, terminals: Map[Symbol, String]) = {
-		if (target.isEmpty) Try("")
-		else ((body.encode(target.head, level), target.head) /: target.tail){
+		val sortedTarget = preferences.sortOrder(this).fold(target){target.sortWith(_)}
+		if (sortedTarget.isEmpty) Try("")
+		else ((body.encode(sortedTarget.head, level), sortedTarget.head) /: sortedTarget.tail){
 			case ((previous, previousElem), elem) =>
 				(for {
 					previous <- previous
 					separator <- separator.encode(())
 					elemBody <- body.encode(elem, level)
-				} yield previous ++ separator.dropReferences ++ preferences.lineBreak(InBetween(this) on (previousElem, elem, target)) ++ elemBody, elem)
+				} yield previous ++ separator.dropReferences ++ preferences.lineBreak(InBetween(this) on (previousElem, elem, sortedTarget)) ++ elemBody, elem)
 		}._1
 	}
 }
@@ -102,17 +103,22 @@ case class RepSep[-T](body: Encoder[T], separator: Encoder[Unit]) extends Encode
 // PREFERENCES
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 
-class EncoderPreferences(
-	spacing: Set[LocationRule[Any]],
-	tabulationSequence: String,
-	tabulationSize: Int,
-	lineBreaks: Map[LocationRule[Any], Int],
-	tabulationLevelIncrements: Map[LocationRule[Any], Int]) {
+case class EncoderPreferences(
+	protected val spacing: Set[LocationRule[Any]] = Set(),
+	protected val tabulationSequence: String = "\t",
+	protected val tabulationSize: Int = 1,
+	protected val lineBreaks: Map[LocationRule[Any], Int] = Map(),
+	protected val tabulationLevelIncrements: Map[LocationRule[Any], Int] = Map(),
+	protected val sortOrders: Set[Order[_]] = Set()
+){
 	def tabulationLevelIncrement(locationKey: LocationKey[_]) = tabulationLevelIncrements.collectFirst{ case (l, i) if l.matches(locationKey) => i } getOrElse 0
 	def space(locationKey: LocationKey[_]) = spacing.collectFirst{ case l if l.matches(locationKey) => " " } getOrElse ""
 	def lineBreak(locationKey: LocationKey[_]) = "\n" * lineBreaks.collect{ case (l, count) if l.matches(locationKey) => count }.sum
 	def tabulation(level: Int) = tabulationSequence * tabulationSize * level
+	def sortOrder[T](target: Encoder[List[T]]) = sortOrders.collectFirst { case order@Order(`target`) => order.criteria.asInstanceOf[(T,T)=>Boolean] }
 }
+
+case class Order[T](target: Encoder[List[T]])(val criteria: (T,T) => Boolean)
 
 trait Location[+T] {
 	def on[U>:T](target: U) = LocationKey(this, target)

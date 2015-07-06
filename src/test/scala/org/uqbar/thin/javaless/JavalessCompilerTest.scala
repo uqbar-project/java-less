@@ -94,7 +94,7 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
 
       "for a class with methods with string literals as body" in {
         val target = Class("MyClass", List(
-          Method("foo", Nil, List(StringLiteral("\"\"\"This is a docBlock\"\"\"")))))
+          Method("foo", Nil, List(StringLiteral("""This is a docBlock""")))))
 
         val classLoader = new BytecodeClassLoader
         compile(Program(target :: Nil), TARGET_FILE)

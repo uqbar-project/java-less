@@ -12,16 +12,13 @@ trait JavalessCompiler {
       val javaClass = $(classDefinition.name) let { it =>
         classDefinition.body.foreach {
           case Method(name, arguments, sentences) =>
-            it += (name :: MethodType($[Unit], arguments.map(_ => $[Object]): _*))(
-              sentences match {
-                case Nil => RETURN
-                case elements => elements.map { e =>
-                  e match {
-                    case e: StringLiteral => LDC(e.value)
-                    case _                => ARETURN
-                  }
-                }
-              })
+            val builder: MethodBuilder = sentences.foldLeft(new MethodBuilder(name :: MethodType($[Unit], arguments.map(_ => $[Object]): _*), List())) { (previousBuilder, sentence) =>
+              sentence match {
+                case e: StringLiteral => previousBuilder ++ LDC(e.value)
+              }
+            }
+            val buildedMethod = builder.build
+            it += (buildedMethod.signature)(buildedMethod.instructions: _*)
           case Field(name) =>
             it += name :: $[Object]
         }
@@ -30,3 +27,18 @@ trait JavalessCompiler {
       ClassWriter.writeClass(javaClass, targetPath)
     }
 }
+
+case class MethodBuilder(signature: Signature[org.uqbar.voodoo.model.Method], instructions: List[org.uqbar.voodoo.model.Instruction]) {
+
+  def ++(instruccion: org.uqbar.voodoo.model.Instruction) =
+    copy(instructions = this.instructions :+ instruccion)
+
+  def build: MethodBuilder =
+    this.instructions match {
+      case List()  => copy(instructions = this.instructions :+ RETURN)
+      case List(_) => copy(instructions = this.instructions)
+    }
+
+}
+
+

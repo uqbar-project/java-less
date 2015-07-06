@@ -77,16 +77,16 @@ class JavalessParserTest extends FreeSpec with ParserTest[JavalessParserDefiniti
               literalBeginEnd+literalBeginEnd should beParsedTo(StringLiteral("\"\"\"\"\"\""))
             }
 						"for non empty string" in {
-              (literalBeginEnd+ "Hello" +literalBeginEnd) should beParsedTo(StringLiteral("\"\"\"Hello\"\"\""))      
+              literalBeginEnd+"Hello"+literalBeginEnd should beParsedTo(StringLiteral("\"\"\"Hello\"\"\""))      
             }
 						"for non empty string containing the string delimiter literal" in 
             {
-              literalBeginEnd+"\'Hello World\'"+literalBeginEnd should beParsedTo(StringLiteral("\"\"\"\'Hello World\'\"\"\""))       
+              literalBeginEnd+"Hello World"+literalBeginEnd should beParsedTo(StringLiteral("\"\"\"Hello World\"\"\""))       
             }
             
             "for multiline string literal" in 
             {
-              literalBeginEnd+"Hello\n World\n!"+literalBeginEnd should beParsedTo(StringLiteral("\"\"\"Hello\n World\n!\"\"\""))
+              "\"\"\"This is a multi-\nline string literal.\"\"\"" should beParsedTo(StringLiteral("\"\"\"This is a multi-\nline string literal.\"\"\""))
             }
 					}
 

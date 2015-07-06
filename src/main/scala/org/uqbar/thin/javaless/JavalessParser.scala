@@ -13,10 +13,9 @@ trait JavalessParserDefinition extends JavaTokenParsers {
   def terminals: Map[Symbol, String]
 
   protected implicit def SymbolToParser(s: Symbol): Parser[String] = terminals(s)
-  
+
   lazy val identifier = ident
-  lazy val stringLiteralType = (
-    "\"\"\"" + """(\n|[^"\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""" + "\"\"\"").r ^^ StringLiteral
+  lazy val stringLiteralType = ("\"\"\"" + """(\n|[^"\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""" + "\"\"\"").r ^^ StringLiteral
   lazy val program = classDefinition.* ^^ Program
   lazy val classDefinition = 'class ~> identifier ~ 'contextOpen ~ classMember.* <~ 'contextClose ^^ { case name ~ _ ~ methods => Class(name, methods) }
   lazy val classMember = methodDefinition | fieldDefinition

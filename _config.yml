@@ -2,8 +2,8 @@
 title: Thin Languages
 header-img: img/home-bg.jpg
 description: "Write your site description here. It will be used as your sites meta description as well!"
-baseurl: "java-less"
-url: "http://uqbar-project.github.io/java-less"
+baseurl: "/java-less"
+url: "http://uqbar-project.github.io"
 github_username: "thin-languages"
 disqus: thinlanguagesgithubio
 

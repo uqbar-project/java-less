@@ -1,0 +1,170 @@
+---
+layout:     post
+title:      "Herramientas y Configuración del Entorno"
+subtitle:   "1er Encuentro Taller de lenguajes"
+date:       2015-02-07 18:00:00
+author:     "Nicolas"
+header-img: "img/post-bg-01.jpg"
+---
+
+
+En el primer encuentro del taller se discutieron las herramientas que vamos a usar, cómo instalarlas y un pantallazo rápido del uso más común de estas. Las herramientas vistas fueron:
+
+- Scala
+- Scala-IDE
+- SBT
+- GIT
+
+##Scala
+
+[scala-lang.org](scala-lang.org)
+
+<blockquote>
+"[...]El sustantivo se forma por acumulación de adjetivos. No se dice luna: se dice aéreo-claro sobre oscuro-redondo o anaranjado-tenue-del cielo o cualquier otra agregación.[...]"
+(Encontrar el undécimo tomo de "A First Encyclopaedia of Tlön").
+</blockquote>
+
+
+No se dice Scala: se dice objeto-funcional
+
+### Por que Scala?
+
+La elección de un lenguaje de programación a la hora de desarrollar un proyecto está íntimamente relacionada con las características del mismo, la experiencia de los miembros del equipo, entre otras cosas.
+A grandes razgos, nos inclinamos por Scala porque los parsers y compiladores pueden ser facilmente modelados como funciones y creemos que su desarrollo se simplifica utilizando herramientas funcionales. Porqué no un lenguaje funcional puro, entonces? Porqué no Haskell o Lisp? Un poco porque creemos que los objetos tienen mucho para ofrecer (especialmente a la hora de producir efectos que sobrevivan a la ejecución),  otro poco porque Scala cuenta con herramientas que simplifican en gran medida el desarrollo y la lectura del código y en parte por capricho de los organizadores del taller :P
+Scala es un lenguaje muy poderoso con ideas muy robustas detrás. Dominarlo puede ser complejo pero creemos que vale la pena y ofrece una plataforma interesante para experimentar con la creación de lenguajes.
+
+En la sección [Resources](/resources/) de este sitio vamos a ir dejando links a tutoriales o elementos de lectura interesantes para aprender Scala.
+
+### Scala-IDE
+
+[scala-ide.org](http://scala-ide.org)
+
+Para trabajar con Scala vamos a necesitar un entorno. El Scala-IDE no es el único que existe pero es gratuito, tiene una comunidad amplia y nos gusta :)
+
+La instalación es muy fácil: Hay que descargar el entorno del sitio, descomprimirlo y listo.
+
+##SBT
+
+[scala-sbt.org](http://scala-sbt.org)
+
+SBT es una herramienta de construcción de proyectos Scala y Java que facilita la organización de dependencias, el trabajo con distintos entornos de desarrollo y la organización general de la vida del proyecto.
+
+Las características del proyecto (cómo su nombre, dependencias, licencias, etc.) se definen en archivos genéricos los cuales SBT luego utiliza para generar los entornos de trabajo para los diferentes IDEs, compilar el programa, correr los tests o ejecutarlo.
+
+###Creando un Proyecto desde Cero
+
+Si queremos crear un nuevo proyecto Scala, lo único que necesitamos es crear una carpeta para guardar los archivos, y dentro de esta crear un archivo de extensión .sbt (el nombre no importa, de hecho podríamos tener varios) con el siguiente contenido:
+
+{% highlight scala %}
+
+name := "miProyecto"
+
+{% endhighlight %}
+
+Eso es todo. Obviamente existen muchas, muchas características que podríamos setear, pero con el nombre sólo alcanza. Ahora solamente tenemos que abrir una consola y ejecutar el comando SBT en el directorio del proyecto:
+
+{% highlight bash %}
+
+~/miProyecto$ sbt
+
+{% endhighlight %}
+
+Al ejecutar esto, SBT va a crear dentro del directorio de nuestro proyecto las carpetas project (que contiene metainformación del proyecto) y target (donde SBT va poner los compilados).
+
+La primera vez que hagamos esto, SBT va a descargar todas las dependencias que necesita para funcionar (puede tomar un rato...). Una vez finalice, veremos la consola de SBT lista para recibir comandos y trabajar con nuestro proyecto.
+
+Preparar un Proyecto para Trabajar Usando Scala-IDE
+
+No importa si creamos el proyecto desde cero o si lo acabamos de clonar usando GIT, si queremos desarrollar usando el Scala-IDE necesitamos pedirle a SBT que genere los archivos que el IDE necesita. Para eso tenemos que ejecutar en la consola:
+
+{% highlight bash %}
+
+~/miProyecto$ sbt eclipse
+
+{% endhighlight %}
+
+O, si ya estamos en la consola de SBT:
+
+{% highlight bash %}
+
+> eclipse
+
+{% endhighlight %}
+
+Lamentablemente, para que esto funcione, SBT necesita usar un plugin que le explique que archivos necesita el Scala-IDE. Para eso tenemos que asegurarnos que en la carpeta project exista algún archivo .sbt con el siguiente contenido:
+
+addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "2.5.0")
+
+Lo que hace esta linea es instalar el plugin que permite que SBT y Scala-IDE se hablen. En caso de que el archivo no exista (por ejemplo, si acabamos de crear el proyecto desde cero) tenemos que crearlo. Porqué hay que poner esto acá y no en la carpeta raiz del proyecto? Ufff... Es complejo. Mejor leerlo del tutorial de SBT (¿Qué quieren, saber todo de una o verme batear unos cuadrangulares!? ).
+
+El comando eclipse no sólo crea todos los archivos necesarios para poder abrir el proyecto desde el Scala-IDE sino que además baja todas las dependencias y las deja asociadas al proyecto. Cuando termine de ejecutar, solamente es necesario abrir el proyecto desde el IDE haciendo click en File > Import... > Existing Project
+
+Ahora podemos ver que se crearon más carpetas (si no existían ya) en donde poner el código.
+
+- src/main/scala : Acá vamos a poner el código de nuestro programa
+- src/test/scala : Acá vamos a poner el código de nuestros tests
+
+### Otros Comandos Útiles
+
+En cualquier momento podemos ejecutar desde la consola de SBT (o desde la consola del SO, anteponiendo el comando sbt) alguno de los siguientes comandos:
+
+- **Compile :** Compila el programa (dejado el resultado en la carpeta target)
+- **Test :** Compila el programa y ejecuta los tests
+- **Run :** Compila y ejecuta el programa
+
+En la sección [Resources](/resources/) de este sitio podemos encontrar links a tutoriales completos de SBT y ejemplos interesantes de uso, para profundizar.
+
+## GIT
+
+[https://github.com/git/git-scm.com](https://github.com/git/git-scm.com)
+
+Git es un sistema de control de versiones distribuido. Permite la creación de una historia para una colección de archivos e incluye la funcionalidad para revertir la colección de archivos a otro estado.
+
+Dicho de otro modo, Git nos va a permitir deshacer nuestros errores, va a ayudarnos a integrar nuestros cambios y a evitar pasarnos el código por mail.
+
+<a href="#">
+    <img src="{{ site.baseurl }}/media/2015-02-27-primer.taller.lenguajes15/mailingGit.png" alt="Post Sample Image">
+</a>
+
+<a href="#">
+    <img src="{{ site.baseurl }}/media/2015-02-27-primer.taller.lenguajes15/facepalm.jpg" alt="Post Sample Image">
+</a>
+
+GIT es una herramienta muy poderosa, fácil de aprender y difícil de dominar. Recomendamos MUCHO seguir alguno de los tutoriales de la sección Resources de este sitio.
+
+### Algunos Comandos Importantes
+
+- **status :** te cuenta en qué estado están los archivos del proyecto, cosas sin trackear (agregables con add o para ignorar agregándolo al contenido del archivo .gitignore), cosas nuevas (que no estaban en commits anteriores), modificados...
+- **init :** crea carpeta oculta .git con toda la metadata del proyecto
+- **add <nombre de archivo o . para todo> :** para registrar los archivos que debería versionar
+- **commit :** guarda en la línea de tiempo local los cambios agregados
+- **push :** le manda el historial de cambios local al repositorio
+- **clone :** baja del repositorio una réplica del proyecto
+- **pull :** fetch + update, trae todo lo que está en el repo y lo unifica con los cambios propios. Si hay conflicto avisa para que lo manejes a mano.
+- **diff :** para que te muestre lo que cambió entre la versión commiteada y la actual
+- **log :** tira el historial de los cambios
+
+##Otros Aspectos a Tener en Cuenta
+
+Si dos personas modifican un archivo y GIT no puede resolverlo automáticamente, va a ser necesario realizar un code merge (que puede ser bastante traumático las primeras veces). Hay varias herramientas que ayudan a facilitar este proceso y sería bueno que un usuario de GIT se familiarice con ellas y aprenda a superar estas situaciones sin entrar en pánico.
+Se acostumbra trabajar el código en diferentes "ramas" para desacoplar los distintos cambios y facilitar la integración. Una vez nos sintamos cómodos trabajando con las bases de GIT, sería bueno aprender a manejar branches.
+Es muy común en proyectos abiertos no tener permisos sobre repositorio del código que queremos modificar (en general con el fin de mantener una versión revisada). Esto suele manejarse utilizando Forks, clones del proyecto original que podemos modificar a voluntad. Es buena idea profundizar sobre este tema también.
+Una vez que hacemos un cambio en un fork o un branch y queremos que forme parte del código original, cómo se hace? Emitiendo un Pull Request. Github ofrece una interfaz cómoda para solicitar la integración de un cambio. Una vez avancemos con proyectos de desarrollo en serio va a ser muy importante saber hacer esto.
+
+###Para la Próxima
+
+Con lo que vimos en este taller, deberíamos ser capaces de:
+
+- **Clonar** un proyecto GIT
+- **Generar** los archivos para el IDE usando SBT
+- **Abrir** el código con el IDE y modificarlo
+- **Poder** hacerle cambios y guardarlos de forma local
+- **Hacer** un pedido de integración entre mi código y el original
+
+En el próximo taller ya deberíamos trabajar entre todos, así todo aquel que pueda, traiga el entorno configurado en su máquina.
+
+##Quotes de este taller
+
+<blockquote>
+ "GitHub es mucha plata que tiene una página web" Nico
+</blockquote>

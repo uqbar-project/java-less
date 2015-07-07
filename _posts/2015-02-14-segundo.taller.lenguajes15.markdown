@@ -1,0 +1,513 @@
+---
+layout:     post
+title:      "Intro a Scala a los Bifes"
+subtitle:   "2do Encuentro Taller de lenguajes"
+date:       2015-02-14 18:00:00
+author:     "Nicolas"
+header-img: "img/post-bg-01.jpg"
+---
+
+
+
+En el segundo encuentro del taller se presentaron algunos aspectos del lenguaje Scala, con el que vamos a estar trabajando en los próximos encuentros, un pantallazo general a las herramientas más comunes disponibles en él y algunas diferencias a la hora de tomar decisiones, producto de tener disponibles tanto conceptos de la programación orientada objetos como de la funcional. Los temas discutidos fueron:
+
+##El lenguaje Scala: Características y definiciones.
+
+
+Scala es un lenguaje híbrido objeto-funcional, o sea que combina ambos paradigmas, y  estáticamente tipado. ¿Qué quiere decir esto?... Que es un lenguaje que en tiempo de compilación ejecutará un chequeador de tipos que analizará nuestro código, y determinará si los tipos utilizados en métodos y funciones son seguros de ejecutarse en tiempo de ejecución. De esta manera, el sistema de tipado estático puede verse como una manera de verificación del programa, ya que si el chequeador de tipos verifica que un sistema esta bien tipado o formado, no existirán posibles errores en tiempo de ejecución por causa del tipo en las variables, atributos, etc.
+
+Esto permite reducir los controles de tipos en tiempo de ejecución. La discusión entre lenguajes estáticamente y dinámicamente tipados no entraron en este capítulo, ya que estaba fuera del foco del taller.
+
+Entonces necesito declarar a qué tipo pertenecen las variables, en los parámetros y el tipo que retornan los métodos utilizados en nuestro código. Por ejemplo:
+
+En el caso de querer declarar variables:
+
+{% highlight scala %}
+var energia : Int
+{% endhighlight %}
+
+Otro caso es cuando definimos métodos tales como:
+
+{% highlight scala %}
+def add(x: Int, y: Int): Int = {
+   x + y
+
+ }
+{% endhighlight %}
+
+En este primer ejemplo tenemos una función add que toma como parámetro un x y un y del tipo Int y devolverá la suma que será del tipo Int.
+
+Otro ejemplo de definición de método podría ser:
+
+{% highlight scala %}
+def separate(x: String): (Int, Int, Int, Int) ={
+
+x.split("\\.")  match {
+
+       case Array(s1, s2, s3, s4) => (s1.toInt, s2.toInt, s3.toInt, s4.toInt)
+
+ }
+
+}
+{% endhighlight %}
+
+Aquí solo nos interesa por el momento la primera parte, en donde tenemos una funcion separate que tiene como parámetro un valor x que debe ser del tipo String y devuelve una tupla de cuatro miembros, y cada miembro es del tipo Int.
+
+
+También podemos no declarar los tipos en algunos  lugares y dejar que el sistema de inferencia se encargue de inferir el tipo. En general, uno no tipa el resultado que devuelve un método y deja que el sistema de inferencia se encargue de resolverlo.
+
+Por ejemplo: Teniendo el pedazo del método add definido previamente puedo definirlo ahora como:
+
+{% highlight scala %}
+ def add(x: Int, y: Int) = {
+
+   x + y
+
+ }
+{% endhighlight %}
+
+Nótese cómo se sacó de la firma del método el :Int, y el sistema de tipos no marcó un error de que “falta el tipo de retorno”. Esto es porque el sistema de tipos al saber que x e y son del tipo Int, y que la operación “+” retorna un valor del tipo Int, “sabe” que se devuelve un valor del tipo Int. Es decir, el sistema no “sabe” mágicamente qué tipo retorna, sino que deduce esto utilizando su mecanismo de inferencia.
+
+Existirán casos en los que el sistema de inferencia de tipos no puede inferir de manera certera qué tipo se está declarando o utilizando en una variable, atributo, etc.; en esos casos deberemos explicitar el tipo, sino te va a marcar un error.
+
+En Scala, las clases no son objetos, sino que son declaraciones de tipos, basados en los métodos y en la composición de otros tipos. Si bien los objetos que se instancian a partir de las definiciones de clase pueden tener un estado interno, trataremos de que no lo tengan, luego veremos el por qué de esto…
+
+##¿Dónde pongo el código?
+
+Buena pregunta! Vamos a explicar paso a paso dónde vamos a ponerlo y de qué manera. Así vamos de menos a más y todos terminamos entendiendo.
+
+Retomando lo visto la clase pasada, a grandes rasgos, tendremos un proyecto sbt cuando cree el archivo proyecto.sbt y traigamos las dependencias definidas en este en la consola ejecutando:
+
+sbt eclipse
+
+De ahora en más, asumimos que está creado el proyecto con todos los pasos que se especificaron en el taller de Herramientas y Configuración del Entorno… Les recomendamos haber configurado todo, asi pueden ir siguiendo bien las explicaciones.
+
+
+Continuando, abrimos el IDE y creamos un nuevo Scala Worksheet (¿cómo? yendo a File/New/Scala Worksheet), en donde creamos el siguiente ejemplo:
+
+{% highlight scala %}
+object WS {
+
+
+
+    class Golondrina{
+
+          var energia = 50
+
+          def vola(metros: Int) = energia -= metros
+
+          def come(cantidad: Int) = energia += cantidad * 2
+
+    }
+
+    var pepita = new Golondrina()    //> pepita  : WS.Golondrina=WS$Golondrina@77383942
+
+    pepita.come(100)
+
+    pepita.energia                                  //> res0: Int = 250
+
+    pepita.vola(10)
+
+    pepita.energia                                  //> res1: Int = 240
+
+}
+{% endhighlight %}
+
+El worksheet es un lugar en donde podemos ir escribiendo código y, a la vez, ver el resultado de la ejecución. En el ejemplo de arriba vemos que ni bien salvamos el código que está escrito, sacando los comentarios, se van a generar estos mismos con los resultados de cada método que se ejecuta.
+
+Veamos de a poco el código... Con respecto a la estructura del worksheet, el mismo se engloba en un object {....}. ¿Esto quiere decir que es un objeto?...... No, en realidad la palabra object en Scala, se refiere a una singleton class, que puede contener definición de clases y métodos. ¿Que es un singleton object? Es una instancia de una clase, que es garantizado de ser único en nuestro ambiente, eso quiere decir que solo existirá un objeto WS que pertenece al worksheet en sí. Lo que sucede por atras es que se crea una clase anónima con el nombre WS (este concepto es muy utilizado en la API de colecciones de Scala, tal es el caso de List, en donde su singleton object, o companion object define su comportamiento).
+
+ Más adelante veremos que podremos tener un singleton object y una clase con el mismo nombre, y existirá una relación entre ambos.
+
+Luego, se declara dentro del worksheet una clase Golondrina, que tendrá una variable Golondrina, que en realidad no es una property (pero esto lo vamos a ver en detalle en la próxima sección) y que se inicializa con el valor 50 cuando se crea una instancia de esta clase. En este caso escribimos:
+
+{% highlight scala %}
+ var energia = 50
+{% endhighlight %}
+
+y no se tuvo que declarar de qué tipo es energía ya que siempre se inicializa en 50.
+
+Los métodos los declaramos de la siguiente manera:
+
+{% highlight scala %}
+def [Nombre del método] ([Nombre de variable]:[Tipo de variable],...): [Tipo de retorno] = { …. }
+{% endhighlight %}
+
+un ejemplo del worksheet se ve en
+
+{% highlight scala %}
+def vola(metros: Int) = energia -= metros
+{% endhighlight %}
+
+siempre antes de empezar un método se empieza con un = y de ahí el código está delimitado entre { }, a excepción de este caso en el que el método es solo de una línea, caso en el que no necesitamos agregárselo.
+
+
+##Properties
+
+¿Una property? ¿Y eso qué es?
+
+Son los atributos. Pero, en Scala no hay “atributos”, sino que se los llama “properties”. Vendrían siendo las variables de un objeto.
+
+¿Y cómo los setteo?
+
+Bueno, eso es muy facil. Aca hay un ejemplo:
+
+{% highlight scala %}
+class Person{
+
+	var name = ""
+
+	var age = 0
+
+}
+
+person = new Person()		//Asi se crea una instancia de la clase Person
+
+person.age = 34			// Asi estoy setteando la property age
+
+person.name = "Juan Perez"		//Y así setteamos la property name
+{% endhighlight %}
+
+##¿Cómo instancio clases?
+
+Sobre las clases también podemos definir una manera para pasarle valores de entrada inicial a una clase que es a través de un constructor. El nombre del método del constructor es this y podemos sobrecargar el método con parámetros, siempre y cuando la primera línea del constructor sea llamar al este sin parámetros.
+
+{% highlight scala %}
+object WS {
+
+ class Golondrina {
+
+    var energia: Int = 20
+
+    def this(energiaInicial: Int) {
+
+      this()
+
+      energia = energiaInicial
+
+    }
+
+ }
+
+ var golondrina = new Golondrina() //> golondrina  :WS.Golondrina =$Golondrina@e414142
+
+ var golondrina2 = new Golondrina(50) //>golondrina2:WS.Golondrina =WS$Golondrina@471cc198
+
+
+
+ println(golondrina.energia) //> 20
+
+ println(golondrina2.energia) //> 50
+
+}
+{% endhighlight %}
+
+##Companion Objects
+
+Antes habíamos mencionado qué es un object y qué una class. Pero si una clase y un object tienen el mismo nombre... ¿Qué pasa?
+
+Habremos codificado un Companion object, que es cuando un object (singleton) y una clase comparten el nombre de clase y están definidos en el mismo archivo. Cada uno tiene acceso a los atributos y métodos privados del otro. En general, usamos companion objects cuando queremos tener algo similar a una clase con métodos estáticos, o cuando queremos aplicar un patrón creacional llamado Factory method ([Link](http://www.oodesign.com/factory-method-pattern.html))
+
+Veamos el siguiente ejemplo, en un worksheet:
+
+{% highlight scala %}
+object WS {
+
+ class Math(val x: Int){
+
+     private var y = 34
+
+     def f = x*y
+
+ }
+
+ object Math {
+
+   def apply(x: Int, y: Int) = {
+
+     val math = new Math(x)
+
+     math.y = y
+
+     math
+
+   }
+
+   def apply(x: Int) = new Math(x)
+
+ }
+
+ println(Math(3).f)                              //> 102
+
+ println(Math(3,45).f)                           //> 135
+
+}
+{% endhighlight %}
+
+Vemos en el ejemplo como podemos declarar un objeto de la clase Math a través de la singleton, que cuando aplicamos a este con un valor, aquí irá a una función de aplicación de acuerdo a la aridad (cantidad de argumentos pasados) y los tipos, creará solo un objeto Math; en el primer caso que hacemos Math(3), ó creará una instancia de Math y además modificará una de sus properties privadas. Vemos en ambos casos lo que devuelve f de acuerdo al escenario.
+
+
+##Mixins
+
+La manera que existe en Scala para reutilizar código entre distintas clases o diferentes jerarquías de clases, y a diferencia de la herencia simple que la clase se hereda, un mixin se “aplica” a una clase. O sea que no está asociada a ninguna superclase o jerarquía en particular.
+
+Un ejemplo de uso de mixins es:
+
+{% highlight scala %}
+object WS {
+
+    trait Comedor {
+
+      var energia: Int
+
+      def come(cantidad: Int) = energia += cantidad
+
+    }
+
+    class Golondrina extends Comedor {
+
+      var energia = 50
+
+    }
+
+    class Persona extends Comedor {
+
+     var energia = 100
+
+    }
+
+    var golondrina = new Golondrina()  //> golondrina  : WS.Golondrina =Golondrina@78a16e60
+
+    var persona = new Persona() //> persona  :WS.Persona =Persona@468475ef
+
+    println(golondrina.energia) //> 50
+
+    golondrina.come(10)
+
+    println(golondrina.energia) //> 60
+
+   persona.come(100)
+
+    println(persona.energia) //> 200
+
+}
+{% endhighlight %}
+
+En este ejemplo vemos como podemos reutilizar un método (come) y un estado (energía), para dos clases que no necesariamente estén en una jerarquía en común, como Persona y Golondrina, pero que ambos pueden entender el concepto de energía y comer.
+
+Para más detalles vean del siguiente link:
+
+https://sites.google.com/site/programacionhm/conceptos/mixins
+
+Siempre que queramos reutilizar código entre clases usamos Traits, si ahora queremos que tengan un parámetro de clase, usamos Clases abstractas.
+
+##Tests Unitarios con ScalaTest
+
+Al escribir un programa en Scala, los errores de sintaxis los corrige nuestro IDE y, el sistema de tipos se encarga de chequear los tipos, pero ¿cómo podemos probar que nuestro código esté haciendo lo que realmente queremos que haga semánticamente?
+
+No lo vamos a hacer por medio de prints, sino que vamos a utilizar tests unitarios.
+
+ ¿Y... qué es eso? Es un método con el que vamos a hacer pruebas sobre partes pequeñas de nuestro código y así,  vamos a comprobar que estén funcionando correctamente.
+
+Los tests unitarios van a ser indispensables cuando tengamos un software complejo ya que, como el software va a estar creciendo todo el tiempo, puede que en algún momento de tanto cambiar las cosas, algunas otras dejen de andar… Y como nadie quisiera que eso pase, vamos a usar los test unitarios para controlar que lo que andaba, siga andando.
+
+Como buena práctica se podria adoptar hacer test pequeños, es decir, que los test que hagamos prueben partes chicas del código, siendo lo más atómico posibles. Así los tests van a comparar valores de salidas conocidos a partir de una entrada determinada de un método específico, pero siendo lo más compacto que se pueda.
+
+Para scala hay varias librerías para hacer testeo unitario, la que vamos a utilizar es scalatest (http://www.scalatest.org/)
+
+Un ejemplo del uso es :
+
+{% highlight scala %}
+import org.scalatest._
+
+class SillyMath {
+
+ def multiply(x: Int, y: Int) = x*y
+
+}
+
+class ExampleSpec extends FreeSpec with Matchers {
+
+ "Testear multiply" in {
+
+   val sillyMath = new SillyMath()
+
+   sillyMath.multiply(2,3) should be(6)
+
+ }
+
+}
+{% endhighlight %}
+
+Para testear un valor de salida en este caso, solamente testeamos el método multiply y luego debemos llamar al método should be (valor esperado), este método se incluye solo en la clase sin que tengamos que hacer nada. should be chequea que el valor de salida del método y el que esperamos sea el mismo, despues hay otro método que es should not be que chequea que dos valores no sean iguales, existen otro métodos que se detallan con ejemplos [aqui](http://www.scalatest.org/user_guide/using_matchers)
+
+##Inmutabilidad
+
+Se define la inmutabilidad en los paradigmas funcional y de objetos, cuando un objeto no puede cambiar su estado una vez inicializado. En general, en los lenguajes de programación es común tener un entorno en donde los objetos son en general mutables o inmutables (por ej. en Haskell). Al tener un objeto inmutable, esto significa que si nuestro objeto tiene un estado y debe cambiar, tendremos que crear uno nuevo.
+
+El que un objeto sea inmutable permite que sea más simple la resolución de  otros problemas complejos como el de la concurrencia entre varios hilos (threads); así, la inmutabilidad permite que los objetos sean thread-safe. Otra cosa que se tiene con un objeto inmutable es que  si se quiere en un momento determinado conocer un estado anterior del objeto se puede hacer sin mayores problemas implementando alguna estructura que me permita almacenar los estados sin que tenga que clonar los objetos.
+
+Otro tema importante a destacar es la relación entre la inmutabilidad y la transparencia referencial. En general, las estructuras inmutables son utilizadas por programas puros. ¿Qué es esto de los programas puros?,  ¿cuándo se habla de pureza en un programa?... Cuando se prohíben los efectos de lado. Si bien a veces los lenguajes de programación hacen uso del efecto de lado (recordemos que hay efecto de lado cuando además de retornar un valor en una función o método se cambia el estado), el uso de estas estructuras inmutables hace que sea innecesario el uso del efecto de lado y que cuando cambie un estado, se preserve su estado anterior.
+
+El hecho que una función sea pura permite que cuando se invoque a esta se devuelva el mismo valor. Y permite que se pueda realizar lo que se conoce como razonamiento ecuacional, en donde si tengo una funcion que es y = f (x) y otra funcion h = g y y se puede reemplazar parte de esta funcion h por h= g f(x) f(x) y que devuelva el mismo valor. Esto implica que un programa puro tiene transparencia referencial. Esto se detalla en profundidad en Søndergaard, Harald; Sestoft, Peter (1990).
+["Referential transparency, definiteness and unfoldability"](http://www.itu.dk/people/sestoft/papers/SondergaardSestoft1990.pdf)
+
+Scala tiene, por ejemplo, clases cuyos objetos son inmutables tales como List y Map. Si queremos usar estas estructuras pero necesitamos que muten, existen, y se llaman MutableList y MutableMap.
+
+En Scala vimos que un clase puede tener properties que son declarados mediante la palabra reservada var.
+
+Por ejemplo:
+
+{% highlight scala %}
+class Golondrina {
+
+    var estado : Int = 34
+
+}
+{% endhighlight %}
+
+También se puede declarar una variable inmutable (se la define con la palabra “val”), que a diferencia de la property, no posee accesors y no puede cambiar de estado. Se expresa una variable de instancia inmutable mediante la palabra reservada val.
+
+Por ejemplo:
+
+{% highlight scala %}
+class Golondrina {
+
+    val estadoInicial = 34
+
+}
+{% endhighlight %}
+
+También se pueden definir argumentos de clase, que sería una manera alternativa de definir estado inicial al instanciar una clase, estos argumentos aunque no se definan explícitamente como val son también inmutables.
+
+{% highlight scala %}
+object WS {
+
+     class Golondrina(val energiaDeclared: Int) {
+
+        var energia = energiaDeclared
+
+        def vola(metros: Int) = energia -= metros
+
+        def come(cantidad: Int) = energia += cantidad * 2
+
+     }
+
+     var pepita =  new Golondrina(50)    //> pepita  : WS.Golondrina=WS$Golondrina@77383942
+
+     pepita.come(100)
+
+     pepita.energia                                  //> res0: Int = 250
+
+     pepita.vola(10)
+
+     pepita.energia                                  //> res1: Int = 240
+
+}
+{% endhighlight %}
+
+###Lazy Val
+
+Otra tema acerca de los atributos inmutables es el caso en el que tengamos referencias cruzadas entre objetos, esto sucede por ej. cuando tenemos una clase amigo y se tiene un argumento de clase que es una referencia a otro objeto, y se tienen dos instancias de clase que se hacen referencia entre si, por ej.
+
+{% highlight scala %}
+class Persona (val amigo: Persona)
+
+val juan = new Persona(jose)
+
+val jose: Persona = new Persona (juan).
+{% endhighlight %}
+
+En este caso en la segunda línea saltaría un error diciéndonos que jose no esta declarado ya que se declara e inicializa en la tercera línea, si subimos esa línea, pasa algo similar ya que jose hace referencia a juan que se declararía en la tercera línea, para resolver esto se declaran a ambas variables como lazy y solo se validará su existencia e inicialización cuando se evalúe el atributo de una de las instancias en tiempo de ejecución.
+
+{% highlight scala %}
+class Persona (val amigo: Persona)
+
+lazy val juan = new Persona(jose)
+
+lazy val jose: Persona = new Persona (juan).
+{% endhighlight %}
+
+##Extras
+
+Acá dejamos unos atajos copados del IDE de eclipse que quizas los hagan más felices a la hora de programar:
+
+- Ctrl + shift + T: busco definiciones en el IDE
+- Control + Shift + O: Importa bibliotecas
+- Control + D: Eliminar línea
+- Control + Espacio: Auto-Completa el nombre de una variable o función
+- Alt + Shift + R: Cambia el nombre de archivos
+- Otros atajos en [http://scala-ide.org/docs/dev/appendix/shortcuts.html](http://scala-ide.org/docs/dev/appendix/shortcuts.html)
+
+##Objetos como funciones y las funciones como objetos
+
+En Scala, todas las construcciones pueden ser objetos, a excepción de las clases que son declaraciones de tipos. Entonces, ¿qué sucede con las funciones? ¿Ahora son objetos también?... Sí, lo son, y cuando los invocamos, lo que sucede en realidad es una aplicación sobre el objeto que ejecuta el bloque de código de la función misma. Y con los objetos de las clases, ¿pueden ser estos también aplicados ya que son objetos? Sí, todas las clases poseen un método de instancia llamado apply, que permite que una instancia pueda ser aplicada como una función. Por ejemplo:
+
+{% highlight scala %}
+object WS {
+
+    class SillyMath(x: Int) {
+
+     def apply(y: Int) = {
+
+        x * x + y * y
+
+      }
+
+   }
+
+   var f = new SillyMath(3) //> f  :WS.SillyMath =WS$SillyMath@70964f92
+
+   f(4) //> res0: Int = 25
+
+ }
+ {% endhighlight %}
+
+Como dijimos antes, las funciones son también objetos, en realidad son un conjunto de Traits, una función que toma un argumento esta definido a través de una instancia de un trait llamado Function1, si no tuviese aridad en los argumentos sería a través del trait Function0, y esto va de 0 a 22; ¿por qué el 22 como máximo? Es solo un número mágico… en serio, se decidió ese máximo de argumentos en el compilador de Scala.
+
+Entonces… como se trata a una función como un objeto? A través de apply en una singleton, de la siguiente manera..
+
+{% highlight scala %}
+object WS {
+
+    object multiply extends Function2[Int, Int, Int] {
+
+        def apply(x: Int, y: Int): Int = x * y + 1
+
+    }
+
+ multiply(1,4)                                   //> res0: Int = 5
+
+}
+{% endhighlight %}
+
+##Polimorfismo Paramétrico vs Ad Hoc
+
+Cuando definimos funciones podemos declarar al tipo de los argumentos y retorno como genéricos siempre y cuando se pueda tratar a toda la jerarquía de la misma manera, por ejemplo
+
+{% highlight scala %}
+object WS {
+
+	def dropHead[A](list: List[A]) = list.tail//> dropHead: [A](list: List[A])List[A]
+
+	dropHead(List(1,3,4))                     //> res0: List[Int] = List(3, 4)
+
+	dropHead(List("Hola","Mundo"))            //> res1: List[String] = List(Mundo)
+
+}
+{% endhighlight %}
+
+
+Se puede ver que dropHead tiene definido en su firma un tipo genérico A cuya entrada es una lista de un tipo A, esto puede ser Int, String, etc… Se puede ver que el uso de la misma función con diferentes tipos no modifica lo que hace la función en sí. Esto se conoce como polimorfismo paramétrico.
+
+##Y ahora...Ejercicios time! :D
+
+Y ahora que ya conocemos la teoría y algunos ejemplos prácticos, vamos a lo que nos gusta...
+En el taller empezamos a hacer un ejercicio llamado "Mascota virtual". La idea es que el que pueda lo haga, así despues podemos debatir sobre qué hizo cada uno y proponer ideas nuevas o formas de resolución distintas.
+
+Ejercicio de Mascota(https://4924d24e-a-62cb3a1a-s-sites.googlegroups.com/site/paradigmasdeprogramacion/material/guas-de-ejercicios/guia-objetos-2008-5-2.pdf?attachauth=ANoY7cqNavyWwLPkO3ZPrkOVzQErvjBvnrgXzawNoq-vaNziwN32Fm1QFKHPv3ELE6v5HwqM0RCIKDSsaGuWhW5xHONPfkf0m57M0C19wHtSsZjPJyJC8gPoqjlMRl9gqd0u9v-myHAQnzH9sEkPYbP_1hHqSy8AWcjfejY7_8Oq9GY2lms30mYRsauMPprFJfjKXgCUxpFneFr6EeaHyIsbw2Q-v1BMMeIgiB7Q07NSIzBlGNpCPYIhmJoaKXyAQQ2E4pE1PnWeq3jkoVp4yFRKJgAR97qYC3LbBcVkNyLyGia2K748v7M%3D&attredirects=0)
+
+###Algunas resoluciones
+
+[https://github.com/bossiernesto/ILD-ScalaPractice](https://github.com/bossiernesto/ILD-ScalaPractice)
+[https://github.com/uqbar-project/ILD-ScalaPractice](https://github.com/uqbar-project/ILD-ScalaPractice)

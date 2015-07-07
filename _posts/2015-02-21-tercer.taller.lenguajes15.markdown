@@ -1,0 +1,37 @@
+---
+layout:     post
+title:      "Scala: Cosas Horribles para Gente Linda"
+subtitle:   "3er Encuentro Taller de lenguajes"
+date:       2015-02-21 18:00:00
+author:     "Nicolas"
+header-img: "img/post-bg-01.jpg"
+---
+
+En el tercer encuentro del taller ampliamos lo visto hasta ahora de Scala, introduciendo algunas herramientas nuevas apuntadas a mejorar la legibilidad del código. Los temas vistos fueron:
+
+- Implicit Classes
+- Implicit Methods
+- Implicit Parameters
+- Aplicación Parcial
+- Futures / Promises
+
+Todos estos temas están cubiertos en los tutoriales de Scala en la sección [Resources](/resources/) de este sitio.
+
+Además de presentar estas herramientas nuevas, nos pusimos a practicar desarrollando un parser sencillo (siguiendo una aproximación intuitiva) para el ejercicio descripto en este enunciado:
+
+[Microcontrolador](https://github.com/uqbar-paco/documentos/blob/master/tadp/enunciados/Microprocesador/Microcontrolador-parcial-original.doc)
+
+Nos pusimos como objetivo, no sólo crear un modelo de datos que soporte las operaciones propuestas en el enunciado, sino además una función (o parser) que construya este modelo a partir de un String o una secuencia de bytes.
+
+
+Trabajamos en conjunto sobre el problema y terminamos llegando a la conclusión de que las case classes y los case objects son herramientas muy prácticas para representar este tipo de modelos y pueden luego ser fácilmente trabajadas utilizando pattern matching. Un aspecto práctico de este enfoque es que, siendo que es muy posible que querramos crear un parser que genere este modelo a partir de un string y, eventualmente, un compilador que convierta este modelo en bytecode o lenguaje máquina (por no mencionar un encoder si es un Lenguaje Liviano) es muy probable que querramos tener estos procesos como proyectos separados (por ejemplo, para tener varios compiladores intercambiables) lo cual haría que trabajar con un modelo de datos rico en comportamiento sea incómodo. Trabajar con modelos livianos utilizando pattern matching facilita la división en proyectos mas chicos.
+
+Otra cosa que observamos durante el taller es que no es trivial procesar un string que representa una expresión irregular (por ejemplo, expresiones con BEGIN ... END anidados) y el código para manejar esto fue incomodo y difícil de seguir. El próximo taller vamos a aprender herramientas que hacen que esto sea mucho más fácil.
+
+Quedó como tarea para el próximo encuentro:
+
+- Completar el parser que hicimos (pueden encontrar el código en [https://github.com/uqbar-project/ILD-ScalaPractice](https://github.com/uqbar-project/ILD-ScalaPractice)) con las instrucciones que faltan del enunciado (STR, LOD y una instrucción WHILE, para los que se animen).
+- Reemplazar las recursividades que usamos en la implementación del parser por funciones de orden superior más piolas (map, filter, fold, etc).
+- Practicar pattern matching implementando la lógica descripta en el enunciado (evaluar y simplificar programas).
+- Repasar Regex y aprender la forma de usarlas en Scala.
+- [Sólo para los que hayan terminado la tarea 1 a 4] Echarle un ojo al proyecto que está en [https://github.com/uqbar-project/ILD-parsers](https://github.com/uqbar-project/ILD-parsers) y a los Parser Combinators de Scala, que es lo que vamos a laburar la próxima. Pueden encontrar una implementación hecha con estas herramientas en el código ya subido.

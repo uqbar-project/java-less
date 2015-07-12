@@ -112,13 +112,13 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
         "with one argument but no body" in {
           val argumentedEmptyMethod = Method("calculate", "arg" :: Nil, Nil)
 
-          argumentedEmptyMethod should beEncodedTo("calculate(arg) {}")(argumentedEmptyMethod -> 0.to(16), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(13), "arg" -> 10.to(12), argumentedEmptyMethod.body -> 16.to(16))
+          argumentedEmptyMethod should beEncodedTo("calculate(arg) {}")(argumentedEmptyMethod -> 0.to(16), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(13), "arg" -> 10.to(12), argumentedEmptyMethod.body -> 16.until(16))
         }
 
         "with arguments but no body" in {
           val argumentedEmptyMethod = Method("calculate", "arg1" :: "arg2" :: Nil, Nil)
 
-          argumentedEmptyMethod should beEncodedTo("calculate(arg1, arg2) {}")(argumentedEmptyMethod -> 0.to(23), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(20), "arg1" -> 10.to(13), "arg2" -> 16.to(19), argumentedEmptyMethod.body -> 23.to(23))
+          argumentedEmptyMethod should beEncodedTo("calculate(arg1, arg2) {}")(argumentedEmptyMethod -> 0.to(23), argumentedEmptyMethod.name -> 0.to(8), argumentedEmptyMethod.arguments -> 9.to(20), "arg1" -> 10.to(13), "arg2" -> 16.to(19), argumentedEmptyMethod.body -> 23.until(23))
         }
 
         "with string literals as body" in {

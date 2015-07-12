@@ -12,7 +12,7 @@ trait JavalessCompiler {
       val javaClass = $(classDefinition.name) let { it =>
         classDefinition.body.foreach {
           case Method(name, arguments, sentences) =>
-            val builder: MethodBuilder = sentences.foldLeft(new MethodBuilder(name :: MethodType($[Unit], arguments.map(_ => $[Object]): _*), List())) { (previousBuilder, sentence) =>
+            val builder: MethodBuilder = sentences.foldLeft(new MethodBuilder(name :: MethodType($[Object], arguments.map(_ => $[Object]): _*), List())) { (previousBuilder, sentence) =>
               sentence match {
                 case e: StringLiteral => previousBuilder ++ LDC(e.value)
               }
@@ -34,9 +34,9 @@ case class MethodBuilder(signature: Signature[org.uqbar.voodoo.model.Method], in
     copy(instructions = this.instructions :+ instruccion)
 
   def build: MethodBuilder =
-    this.instructions match {
-      case List()  => copy(instructions = this.instructions :+ RETURN)
-      case List(_) => copy(instructions = this.instructions)
+    this.instructions match {      
+      case List()  => copy(instructions = this.instructions :+ ACONST_NULL :+ ARETURN)
+      case List(_) => copy(instructions = this.instructions :+ ARETURN)
     }
 
 }

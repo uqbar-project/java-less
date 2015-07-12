@@ -21,8 +21,8 @@ class JavalessCompilerTest extends FreeSpec with Matchers with BeforeAndAfterAll
   }
 
   override def afterAll {
-    TEMP_PATH.listFiles.foreach { _.delete }
-    TEMP_PATH.delete
+//    TEMP_PATH.listFiles.foreach { _.delete }
+//    TEMP_PATH.delete
   }
 
   "Javaless compilation" - {

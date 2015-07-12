@@ -122,9 +122,9 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
         }
 
         "with string literals as body" in {
-          val literalString1 = StringLiteral("\"\"\"This is a dobBlock\"\"\"")
+          val literalString1 = StringLiteral("\"This is a dobBlock\"")
           val argumentedLiteralStringMethod = Method("calculate", "xarg" :: Nil, List(literalString1))
-          argumentedLiteralStringMethod should beEncodedTo("calculate(xarg) {\"\"\"This is a dobBlock\"\"\"}")(argumentedLiteralStringMethod -> 0.to(41), argumentedLiteralStringMethod.name -> 0.to(8), argumentedLiteralStringMethod.arguments -> 9.to(14), "xarg" -> 10.to(13), argumentedLiteralStringMethod.body -> 17.to(40), literalString1 -> 17.to(40), literalString1.value -> 17.to(40))
+          argumentedLiteralStringMethod should beEncodedTo("calculate(xarg) {\"This is a dobBlock\"}")(argumentedLiteralStringMethod -> 0.to(37), argumentedLiteralStringMethod.name -> 0.to(8), argumentedLiteralStringMethod.arguments -> 9.to(14), "xarg" -> 10.to(13), argumentedLiteralStringMethod.body -> 17.to(36), literalString1 -> 17.to(36), literalString1.value -> 17.until(37))
         }
       }
 
@@ -138,24 +138,19 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
               implicit val encoder = stringLiteral
               
               "for empty string" in {
-               val literalString1 = StringLiteral("\"\"\"\"\"\"")
-               literalString1 should beEncodedTo("\"\"\"\"\"\"")(literalString1 -> 0.to(5), literalString1.value-> 0.to(5))
+               val literalString1 = StringLiteral("\"\"")
+               literalString1 should beEncodedTo("\"\"")(literalString1 -> 0.to(1), literalString1.value-> 0.to(1))
               }
 
               "for non empty string" in {
-                val literalString1 = StringLiteral("\"\"\"This is a docBlock\"\"\"")
-                literalString1 should beEncodedTo("\"\"\"This is a docBlock\"\"\"")(literalString1 -> 0.to(23), literalString1.value-> 0.to(23))
+                val literalString1 = StringLiteral("\"This is a docBlock\"")
+                literalString1 should beEncodedTo("\"This is a docBlock\"")(literalString1 -> 0.to(19), literalString1.value-> 0.to(19))
               }
               "for non empty string containing the string delimiter literal" in {
-                val literalString = StringLiteral("\"\"\"\'Hello World\'\"\"\"")
-                literalString should beEncodedTo("\"\"\"\'Hello World\'\"\"\"")(literalString -> 0.to(18), literalString.value-> 0.to(18))
+                val literalString = StringLiteral("\"\'Hello World\'\"")
+                literalString should beEncodedTo("\"\'Hello World\'\"")(literalString -> 0.to(14), literalString.value-> 0.to(14))
               }
               
-              "for multiline string literal " in 
-              {
-                val literalString = StringLiteral("\"\"\"Hello\n World\n!\"\"\"")
-                literalString should beEncodedTo("\"\"\"Hello\n World\n!\"\"\"")(literalString -> 0.to(19), literalString.value-> 0.to(19))
-              }
             }
 
           }

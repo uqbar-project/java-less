@@ -111,16 +111,16 @@ class JavalessEncoderTest extends FreeSpec with JavalessEncoderDefinition with E
           val argumentedEmptyMethod = Method("calculate", "arg" :: Nil, Nil)
 
           argumentedEmptyMethod should beEncodedTo"""
-						${0}calculate${1}(${2}arg${3}) {}${4}
-					"""(argumentedEmptyMethod -> 0.until(4), argumentedEmptyMethod.name -> 0.until(1), argumentedEmptyMethod.arguments -> 1.to(3), "arg" -> 2.to(3), List() -> 16.until(16))
+            ${0}calculate${1}(${2}arg${3}) {}${4}
+          """(argumentedEmptyMethod -> 0.until(4), argumentedEmptyMethod.body -> 4.until(4), argumentedEmptyMethod.name -> 0.until(1), argumentedEmptyMethod.arguments -> 1.to(3), "arg" -> 2.until(3))
         }
 
         "with arguments but no body" in {
           val argumentedEmptyMethod = Method("calculate", "arg1" :: "arg2" :: Nil, Nil)
 
           argumentedEmptyMethod should beEncodedTo"""
-						${0}calculate${1}(${2}arg1${3}, ${4}arg2${5}) {}${6}
-					"""(argumentedEmptyMethod -> 0.until(6), argumentedEmptyMethod.name -> 0.until(1), argumentedEmptyMethod.arguments -> 1.to(5), "arg1" -> 2.until(3), "arg2" -> 4.until(5), argumentedEmptyMethod.arguments -> 9.to(14), "xarg" -> 10.to(13), argumentedEmptyMethod.body -> 17.to(36))
+            ${0}calculate${1}(${2}arg1${3}, ${4}arg2${5}) {}${6}
+          """(argumentedEmptyMethod -> 0.until(6), argumentedEmptyMethod.body -> 6.until(6), argumentedEmptyMethod.name -> 0.until(1), argumentedEmptyMethod.arguments -> 1.to(5), "arg1" -> 2.until(3), "arg2" -> 4.until(5))
         }
 
         "with string literals as body" in {

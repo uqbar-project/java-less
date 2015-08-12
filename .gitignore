@@ -7,3 +7,4 @@ target
 .worksheet
 .tmpBin
 *.sc
+.cache*

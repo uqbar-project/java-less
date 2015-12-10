@@ -44,6 +44,7 @@ class EncodersTest extends FreeSpec with Encoders with EncoderMatchers {
 		}
 
 		"Append" - {
+			
 			"output text should be the result of appending the output of the given encoders" in {
 				'Foo ~ 'Bar encode (()) should resultIn("FooBar")(() -> 0.to(5))
 				'Foo ~ 'Bar ~ 'Meh encode (()) should resultIn("FooBarMeh")(() -> 0.to(8))
